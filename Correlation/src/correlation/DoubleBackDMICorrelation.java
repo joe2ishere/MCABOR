@@ -339,7 +339,8 @@ public class DoubleBackDMICorrelation implements Runnable {
 													& tabBest.getTopValue(i) >= abscorr)) {
 												continue nextDD;
 											}
-										int setAt = tabBest.setTop(abscorr,
+										//int setAt = 
+												tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.dmiPeriod,
 														dmifunctionDaysDiff, dmiDaysBack, corr));
 //										if (setAt != -1) {

@@ -134,11 +134,7 @@ public class DMIMakeARFFfromSQL {
 		pw.println("@DATA");
 
 		int arraypos[] = new int[dmis.size()];
-		int pos = 0;
-		for (String key : dmis.keySet()) {
-			arraypos[pos] = 0;
-		}
-		pos = 50;
+		int pos = 50;
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 

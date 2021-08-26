@@ -48,6 +48,7 @@ import bands.DeltaBands;
 import util.Averager;
 import util.getDatabaseConnection;
 import utils.TopAndBottomList;
+import weka.classifiers.Classifier;
 import weka.classifiers.functions.LinearRegression;
 import weka.core.Instances;
 
@@ -74,8 +75,8 @@ public abstract class CorrelationEstimator implements Runnable {
 	static String pdfEndRow = "</fo:table-row>";
 	static String pdfDataCell = "<fo:table-cell><fo:block background-color='%c'>%s</fo:block></fo:table-cell>\n";
 
-	static double buyIndicatorLimit = 6.75;
-	static double sellIndicatorLimit = 2.25;
+	static double buyIndicatorLimit = 7.75;
+	static double sellIndicatorLimit = 1.25;
 
 	static File resultsForDBFile;
 	static PrintWriter resultsForDBPrintWriter;
@@ -635,7 +636,7 @@ public abstract class CorrelationEstimator implements Runnable {
 		StringBuffer emailText = new StringBuffer();
 
 		emailText.append("The " + wordsCapitalized(catOverallAverages.getTopDescription()[0]) + " sector has the best "
-				+ " overall outlook for next 30 trading days with an average score of "
+				+ " overall forecast for the next 30 trading days, with an average score of "
 				+ df.format(catOverallAverages.getTopValue(0)) + ". ");
 
 		String besties[] = tabLookAhead.getTopDescription()[0].split("<");
@@ -649,8 +650,8 @@ public abstract class CorrelationEstimator implements Runnable {
 
 		emailText.append(wordsCapitalized(besties[0]) + " sector has " + (bestOrTop ? "the best" : "a good"));
 		bestOrTop = ThreadLocalRandom.current().nextBoolean();
-		emailText.append(" short-term " + (bestOrTop ? "outlook" : "prospect") + ", which should occur in " + besties[1]
-				+ " days. ");
+		emailText.append(" short-term " + (bestOrTop ? "prediction" : "prospect") + ", which should occur in "
+				+ besties[1] + " days. ");
 
 		emailText.append("The computed average is " + df.format(tabLookAhead.getTopValue(0)) + ". ");
 
@@ -712,20 +713,21 @@ public abstract class CorrelationEstimator implements Runnable {
 		boolean contrastOrSell = ThreadLocalRandom.current().nextBoolean();
 		emailText.append("<p>" + (contrastOrSell ? "In contrast" : "On the sell side") + ", the "
 				+ wordsCapitalized(catOverallAverages.getBottomDescription()[0]) + " sector has the worst "
-				+ " overall outlook for next 30 trading days with an average score of "
+				+ " overall view for the next 30 trading days with an average score of "
 				+ df.format(catOverallAverages.getBottomValue(0)) + ". ");
 
 		boolean worseOrLowest = ThreadLocalRandom.current().nextBoolean();
 		besties = tabLookAhead.getBottomDescription()[0].split("<");
 		if (besties[0].compareTo(catOverallAverages.getBottomDescription()[0]) == 0) {
-			emailText.append(" Also the ");
+			emailText.append(" Also, the ");
 		} else {
 			emailText.append(" The ");
 
 		}
 
-		emailText.append(wordsCapitalized(besties[0]) + " sector has a " + (worseOrLowest ? "poor" : "underperforming")
-				+ " outlook in the " + besties[1] + " day period; ");
+		emailText.append(
+				wordsCapitalized(besties[0]) + " sector has " + (worseOrLowest ? "a poor" : "an underperforming")
+						+ " prospect in the " + besties[1] + " day period; ");
 
 		emailText.append("The computed average is " + df.format(tabLookAhead.getBottomValue(0)) + ".");
 
@@ -754,12 +756,12 @@ public abstract class CorrelationEstimator implements Runnable {
 				periods = besties[1].split(" ");
 				int p11 = Integer.parseInt(periods[0]);
 				int p21 = Integer.parseInt(periods[2]);
-				emailText.append(" Coming in second with a weak outlook is the " + wordsCapitalized(besties[0])
-						+ " sector for ");
+				emailText.append(
+						" Coming in second with a weak prospect is the " + wordsCapitalized(besties[0]) + " sector ");
 				if (p11 == p1 & p21 == p2)
-					emailText.append(" the same period. ");
+					emailText.append("for the same period. ");
 				else
-					emailText.append(" in " + besties[1] + " days,");
+					emailText.append("in " + besties[1] + " days,");
 				topsym = new TopAndBottomList();
 				catSyms = catETFList.get(besties[0]).toString().split(" ");
 				for (String csym : catSyms) {
@@ -1691,4 +1693,6 @@ public abstract class CorrelationEstimator implements Runnable {
 		return 0.;
 
 	}
+
+	public abstract Classifier getClassifier();
 }

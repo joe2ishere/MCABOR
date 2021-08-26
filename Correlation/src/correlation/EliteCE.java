@@ -20,6 +20,7 @@ import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 import bands.DeltaBands;
 import util.Averager;
 import util.getDatabaseConnection;
+import weka.classifiers.Classifier;
 import weka.core.Instances;
 
 public class EliteCE extends CorrelationEstimator {
@@ -35,7 +36,7 @@ public class EliteCE extends CorrelationEstimator {
 		ArrayList<CorrelationEstimator> estimators = new ArrayList<>();
 		Connection conn = getDatabaseConnection.makeConnection();
 		EliteCE ece = new EliteCE(conn);
-		ece.functionDayAverager = CorrelationFunctionPerformance.loadFromFile();
+		CorrelationEstimator.functionDayAverager = CorrelationFunctionPerformance.loadFromFile();
 		ece.setDoElite();
 		final PreparedStatement stGetDate = conn
 				.prepareStatement("select distinct txn_date from etfprices order by txn_date desc limit 2");
@@ -47,8 +48,6 @@ public class EliteCE extends CorrelationEstimator {
 		ArrayList<String> dtHeadings = dateList(currentMktDate, 5);
 		rsDate.next();
 
-		estimators.add(new ADXCorrelationEstimator(conn));
-		estimators.add(new ATRCorrelationEstimator(conn));
 		// estimators.add(new BBCorrelationEstimator(conn));
 		estimators.add(new DMICorrelationEstimator(conn));
 		estimators.add(new MACDCorrelationEstimator(conn));
@@ -71,6 +70,7 @@ public class EliteCE extends CorrelationEstimator {
 		eliteList.add("qqq");
 		eliteList.add("tqqq");
 		eliteList.add("sqqq");
+		;
 
 		StringBuffer htmlMsg = new StringBuffer("<strong> <style> \n" + " table, th, td { border: 1px solid black; }"
 				+ "</style>\n<table><tr><th style='text-align: center;'>Symbol<th style='text-align: center;'>"
@@ -216,6 +216,12 @@ public class EliteCE extends CorrelationEstimator {
 
 		return retDates;
 
+	}
+
+	Classifier thisClassifier;
+
+	public Classifier getClassifier() {
+		return thisClassifier;
 	}
 
 	@Override

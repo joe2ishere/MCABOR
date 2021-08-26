@@ -275,8 +275,6 @@ public class DoubleBackNATRCorrelation implements Runnable {
 
 					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= 30; pricefunctionDaysDiff += 1) {
 
-						String keyCount = closingSymbol + "_" + pricefunctionDaysDiff;
-
 						for (int natrfunctionDaysDiff = 1; natrfunctionDaysDiff <= 9; natrfunctionDaysDiff += 1) {
 							{
 								/*
@@ -342,7 +340,8 @@ public class DoubleBackNATRCorrelation implements Runnable {
 										if (abscorr < tabBest.getTopValue(0)
 												& tabBest.getTopDescription()[0].contains(";" + qSymbol))
 											continue;
-										int setAt = tabBest.setTop(abscorr,
+										//int setAt = 
+										tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.natrPeriod,
 														natrfunctionDaysDiff, natrDaysBack, corr));
 

@@ -12,6 +12,7 @@ import com.tictactec.ta.lib.MInteger;
 
 import bands.DeltaBands;
 import util.Realign;
+import weka.classifiers.Classifier;
 import weka.core.Instances;
 
 public class CCICorrelationEstimator extends CorrelationEstimator {
@@ -98,6 +99,12 @@ public class CCICorrelationEstimator extends CorrelationEstimator {
 
 		pw.print(makeSQL.getAttributeText((double[]) myParm, functionDaysDiff, start, doubleBack));
 
+	}
+
+	Classifier thisClassifier;
+
+	public Classifier getClassifier() {
+		return thisClassifier;
 	}
 
 	@Override

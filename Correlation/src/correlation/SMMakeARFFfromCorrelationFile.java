@@ -188,9 +188,7 @@ public class SMMakeARFFfromCorrelationFile {
 
 		int arraypos[] = new int[smis.size()];
 		int pos = 0;
-		for (String key : smis.keySet()) {
-			arraypos[pos] = 0;
-		}
+		 
 		pos = 50;
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;

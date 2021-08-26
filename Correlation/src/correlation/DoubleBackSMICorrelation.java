@@ -336,7 +336,8 @@ public class DoubleBackSMICorrelation implements Runnable {
 													& tabBest.getTopValue(i) >= abscorr)) {
 												continue nextDD;
 											}
-										int setAt = tabBest.setTop(abscorr,
+										//int setAt = 
+										tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.hilowPeriod,
 														q.maPeriod, q.smoothPeriod, q.singnalPeriod,
 														smifunctionDaysDiff, smiDaysBack, corr));

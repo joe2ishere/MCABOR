@@ -127,11 +127,7 @@ public class HullMAMakeARFFfromCorrelationFile {
 		pw.println("@DATA");
 
 		int arraypos[] = new int[hmas.size()];
-		int pos = 0;
-		for (String key : hmas.keySet()) {
-			arraypos[pos] = 0;
-		}
-		pos = 50;
+		int pos = 50;
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 

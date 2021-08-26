@@ -525,6 +525,12 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 
 	}
 
+	Classifier thisClassifier;
+
+	public Classifier getClassifier() {
+		return thisClassifier;
+	}
+
 	public double drun(Instances instances) throws Exception {
 		Classifier classifier = new IBk();
 		String args[] = { "-I" };

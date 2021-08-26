@@ -341,7 +341,8 @@ public class DoubleBackTSFCorrelation implements Runnable {
 													& tabBest.getTopValue(i) >= abscorr)) {
 												continue nextDD;
 											}
-										int setAt = tabBest.setTop(abscorr,
+										//int setAt = 
+										tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.TSFPeriod,
 														TSFfunctionDaysDiff, doubleBack, corr));
 //										if (setAt != -1) {

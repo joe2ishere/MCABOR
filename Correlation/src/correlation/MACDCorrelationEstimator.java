@@ -13,13 +13,11 @@ import com.tictactec.ta.lib.MInteger;
 
 import bands.DeltaBands;
 import util.Realign;
-import weka.attributeSelection.ASEvaluation;
-import weka.attributeSelection.ASSearch;
-import weka.attributeSelection.AttributeSelection;
-import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
 import weka.classifiers.lazy.IBk;
+import weka.core.EuclideanDistance;
 import weka.core.Instances;
+import weka.core.neighboursearch.LinearNNSearch;
 
 public class MACDCorrelationEstimator extends CorrelationEstimator {
 
@@ -34,13 +32,21 @@ public class MACDCorrelationEstimator extends CorrelationEstimator {
 		function = "macd";
 	}
 
+	Classifier thisClassifier;
+
+	public Classifier getClassifier() {
+		return thisClassifier;
+	}
+
 	@Override
 	public double drun(Instances instances) throws Exception {
 
 		IBk classifier = new IBk();
-		String options[] = { "-K", "2", "-X", "-I" };
-		classifier.setOptions(options);
-		classifier.setMeanSquared(true);
+		thisClassifier = classifier;
+		String options[] = { "-K", "44", "-X", "-I" };
+//		String options[] = { "-K", "2", "-X", "-I" };
+//		classifier.setOptions(options);
+//		classifier.setMeanSquared(true);
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
 	}
@@ -125,30 +131,45 @@ public class MACDCorrelationEstimator extends CorrelationEstimator {
 	@Override
 	public double getBestClassifier(Instances instances) throws Exception {
 		if (daysOut == 4) {
-			AttributeSelection as = new AttributeSelection();
-			ASSearch asSearch = ASSearch.forName("weka.attributeSelection.GreedyStepwise",
-					new String[] { "-C", "-B", "-R" });
-			as.setSearch(asSearch);
-			ASEvaluation asEval = ASEvaluation.forName("weka.attributeSelection.CfsSubsetEval", new String[] { "-M" });
-			as.setEvaluator(asEval);
-			as.SelectAttributes(instances);
-			Instances instances2 = as.reduceDimensionality(instances);
-			Classifier classifier = AbstractClassifier.forName("weka.classifiers.lazy.KStar",
-					new String[] { "-B", "51", "-M", "d" });
-
-			classifier.buildClassifier(instances2);
-			return classifier.classifyInstance(instances2.get(instances2.size() - 1));
-
-		}
-		if (daysOut == 5) {
-			Classifier classifier = AbstractClassifier.forName("weka.classifiers.lazy.IBk",
-					new String[] { "-E", "-K", "9", "-X", "-I" });
+			// wrappedClassifier=weka.classifiers.lazy.IBk- [-K, 30, -W, 0, -X,
+			// -A, weka.core.neighboursearch.LinearNNSearch -A "weka.core.EuclideanDistance
+			// -R first-last", -do-not-check-capabilities]]
+			IBk classifier = new IBk();
+			classifier.setOptions(new String[] { "-K", "30", "-W", "0", "-X", "-do-not-check-capabilities" });
+			LinearNNSearch lnns = new LinearNNSearch();
+			EuclideanDistance df = new EuclideanDistance();
+			df.setAttributeIndices("first-last");
+			lnns.setDistanceFunction(df);
+			classifier.setNearestNeighbourSearchAlgorithm(lnns);
 			classifier.buildClassifier(instances);
 			return classifier.classifyInstance(instances.get(instances.size() - 1));
 		}
-		Classifier classifier = AbstractClassifier.forName("weka.classifiers.meta.AdditiveRegression", new String[] {
-				"-S", "1", "-I", "30", "-W", "weka.classifiers.lazy.IBk", "--", "-K", "28", "-X", "-I" });
+		if (daysOut == 5) {
+			// wrappedClassifier=weka.classifiers.lazy.IBk- [-K, 59, -W, 0, -X, -E, -I,
+			// -A, weka.core.neighboursearch.LinearNNSearch -A "weka.core.EuclideanDistance
+			// -R first-last", -do-not-check-capabilities]]
+			IBk classifier = new IBk();
+			classifier.setOptions(new String[] { "-K", "59", "-W", "0", "-X", "-E", "-do-not-check-capabilities" });
+			LinearNNSearch lnns = new LinearNNSearch();
+			EuclideanDistance df = new EuclideanDistance();
+			df.setAttributeIndices("first-last");
+			lnns.setDistanceFunction(df);
+			classifier.setNearestNeighbourSearchAlgorithm(lnns);
+			classifier.buildClassifier(instances);
+			return classifier.classifyInstance(instances.get(instances.size() - 1));
+		}
+		// weka.classifiers.lazy.IBk- [-K, 56, -W, 0, -X, -A,
+		// weka.core.neighboursearch.LinearNNSearch
+		// -A "weka.core.EuclideanDistance -R first-last", -do-not-check-capabilities]]
+		IBk classifier = new IBk();
+		classifier.setOptions(new String[] { "-K", "56", "-W", "0", "-X", "-do-not-check-capabilities" });
+		LinearNNSearch lnns = new LinearNNSearch();
+		EuclideanDistance df = new EuclideanDistance();
+		df.setAttributeIndices("first-last");
+		lnns.setDistanceFunction(df);
+		classifier.setNearestNeighbourSearchAlgorithm(lnns);
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
+
 	}
 }

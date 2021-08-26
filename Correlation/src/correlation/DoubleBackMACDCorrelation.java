@@ -360,7 +360,8 @@ public class DoubleBackMACDCorrelation implements Runnable {
 												continue nextDD;
 											}
 										{
-											int setAt = tabBest.setTop(abscorr,
+										//	int setAt = 
+											tabBest.setTop(abscorr,
 													makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.fastPeriod,
 															q.slowPeriod, q.signalPeriod, smfunctionDaysDiff,
 															doubleBack, corr));

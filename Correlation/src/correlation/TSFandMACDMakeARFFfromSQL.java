@@ -178,15 +178,9 @@ public class TSFandMACDMakeARFFfromSQL {
 		// one problem is that there are missing dates in some of the tables
 
 		int tsfArrayPos[] = new int[tsfs.size()];
-		int pos = 0;
-		for (String key : tsfs.keySet()) {
-			tsfArrayPos[pos] = 0;
-		}
 		int macdArrayPos[] = new int[macds.size()];
-		for (String key : macds.keySet()) {
-			macdArrayPos[pos] = 0;
-		}
-		pos = 50;
+		int pos = 50;
+		 
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 

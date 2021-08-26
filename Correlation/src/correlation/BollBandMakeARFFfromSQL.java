@@ -139,11 +139,8 @@ public class BollBandMakeARFFfromSQL {
 		pw.println("@DATA");
 
 		int arraypos[] = new int[bbs.size()];
-		int pos = 0;
-		for (String key : bbs.keySet()) {
-			arraypos[pos] = 0;
-		}
-		pos = 50;
+		int pos = 50;
+		 
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 

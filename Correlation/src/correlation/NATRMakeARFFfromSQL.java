@@ -139,11 +139,7 @@ public class NATRMakeARFFfromSQL {
 		pw.println("@DATA");
 
 		int arraypos[] = new int[natrs.size()];
-		int pos = 0;
-		for (String key : natrs.keySet()) {
-			arraypos[pos] = 0;
-		}
-		pos = 50;
+		int pos = 50;
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 

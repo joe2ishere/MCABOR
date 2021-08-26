@@ -159,11 +159,7 @@ public class MakeMFBuySellReportUsingBB {
 				pwtest.print(bbSW.toString());
 
 				int arraypos[] = new int[bbs.size()];
-				int pos = 0;
-				for (String key : bbs.keySet()) {
-					arraypos[pos] = 0;
-				}
-				pos = 50;
+				int pos = 50;
 				while (dates.get(pos).compareTo(startDate) < 0)
 					pos++;
 

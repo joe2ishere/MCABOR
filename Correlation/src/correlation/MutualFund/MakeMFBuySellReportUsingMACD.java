@@ -161,11 +161,7 @@ public class MakeMFBuySellReportUsingMACD {
 				pwtest.print(macdSW.toString());
 
 				int arraypos[] = new int[macds.size()];
-				int pos = 0;
-				for (String key : macds.keySet()) {
-					arraypos[pos] = 0;
-				}
-				pos = 50;
+				int pos = 50;
 				while (dates.get(pos).compareTo(startDate) < 0)
 					pos++;
 

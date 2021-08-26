@@ -12,13 +12,12 @@ import com.tictactec.ta.lib.MInteger;
 
 import bands.DeltaBands;
 import util.Realign;
-import weka.attributeSelection.ASEvaluation;
-import weka.attributeSelection.ASSearch;
-import weka.attributeSelection.AttributeSelection;
-import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
 import weka.classifiers.lazy.IBk;
+import weka.classifiers.trees.RandomForest;
+import weka.core.EuclideanDistance;
 import weka.core.Instances;
+import weka.core.neighboursearch.LinearNNSearch;
 
 public class DMICorrelationEstimator extends CorrelationEstimator {
 
@@ -33,12 +32,22 @@ public class DMICorrelationEstimator extends CorrelationEstimator {
 		function = "dmi";
 	}
 
+	Classifier thisClassifier;
+
+	public Classifier getClassifier() {
+		return thisClassifier;
+	}
+
 	@Override
 	public double drun(Instances instances) throws Exception {
 		IBk classifier = new IBk();
-		classifier.setKNN(2);
-		classifier.setCrossValidate(true);
-		classifier.setMeanSquared(true);
+		thisClassifier = classifier;
+		/*
+		 * classifier.setKNN(2); classifier.setCrossValidate(true);
+		 * classifier.setMeanSquared(true); classifier.buildClassifier(instances);
+		 * 
+		 */
+		classifier.setOptions(new String[] { "-K", "19", "-I", "-E", "-X" });
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
 
@@ -116,48 +125,31 @@ public class DMICorrelationEstimator extends CorrelationEstimator {
 	@Override
 	public double getBestClassifier(Instances instances) throws Exception {
 
-		if (daysOut == 3) {
-			AttributeSelection as = new AttributeSelection();
-			ASSearch asSearch = ASSearch.forName("weka.attributeSelection.BestFirst",
-					new String[] { "-D", "1", "-N", "6" });
-			as.setSearch(asSearch);
-			ASEvaluation asEval = ASEvaluation.forName("weka.attributeSelection.CfsSubsetEval", new String[] { "-M" });
-			as.setEvaluator(asEval);
-			as.SelectAttributes(instances);
-			Instances instances2 = as.reduceDimensionality(instances);
-			Classifier classifier = AbstractClassifier.forName("weka.classifiers.meta.AttributeSelectedClassifier",
-					new String[] { "-S", "weka.attributeSelection.GreedyStepwise", "-E",
-							"weka.attributeSelection.CfsSubsetEval", "-W", "weka.classifiers.trees.RandomForest", "--",
-							"-I", "165", "-K", "2", "-depth", "0" });
-			classifier.buildClassifier(instances2);
-			return classifier.classifyInstance(instances2.get(instances2.size() - 1));
+		if (daysOut == 5) {
+			RandomForest classifier = new RandomForest();
+			classifier.setOptions(
+					new String[] { "-K", "0", "-M", "4.0", "-V", "0.001", "-S", "1", "-do-not-check-capabilities" });
+			classifier.buildClassifier(instances);
+			return classifier.classifyInstance(instances.get(instances.size() - 1));
 
 		}
-		if (daysOut == 5) {
-			AttributeSelection as = new AttributeSelection();
-			ASSearch asSearch = ASSearch.forName("weka.attributeSelection.GreedyStepwise", new String[] { "-C", "-R" });
-			as.setSearch(asSearch);
-			ASEvaluation asEval = ASEvaluation.forName("weka.attributeSelection.CfsSubsetEval",
-					new String[] { "-M", "-L" });
-			as.setEvaluator(asEval);
-			as.SelectAttributes(instances);
-			Instances instances2 = as.reduceDimensionality(instances);
-			Classifier classifier = AbstractClassifier.forName("weka.classifiers.lazy.KStar",
-					new String[] { "-B", "78", "-M", "m" });
-			classifier.buildClassifier(instances2);
-			return classifier.classifyInstance(instances2.get(instances2.size() - 1));
+		if (daysOut == 4) {
+			RandomForest classifier = new RandomForest();
+			classifier.setOptions(new String[] { "-K", "16", "-M", "2.0", "-V", "10.0", "-S", "1", "-depth", "9", "-B",
+					"-do-not-check-capabilities" });
+			classifier.buildClassifier(instances);
+			return classifier.classifyInstance(instances.get(instances.size() - 1));
 		}
-		AttributeSelection as = new AttributeSelection();
-		ASSearch asSearch = ASSearch.forName("weka.attributeSelection.GreedyStepwise", new String[] { "-C", "-R" });
-		as.setSearch(asSearch);
-		ASEvaluation asEval = ASEvaluation.forName("weka.attributeSelection.CfsSubsetEval", new String[] { "-M" });
-		as.setEvaluator(asEval);
-		as.SelectAttributes(instances);
-		Instances instances2 = as.reduceDimensionality(instances);
-		Classifier classifier = AbstractClassifier.forName("weka.classifiers.meta.RandomCommittee",
-				new String[] { "-I", "14", "-S", "1", "-W", "weka.classifiers.trees.RandomForest", "--", "-I", "83",
-						"-K", "0", "-depth", "0" });
-		classifier.buildClassifier(instances2);
-		return classifier.classifyInstance(instances2.get(instances2.size() - 1));
+//[-K, 43, -W, 0, -X, -A, weka.core.neighboursearch.LinearNNSearch -A "weka.core.EuclideanDistance -R first-last", -do-not-check-capabilities]]
+		IBk classifier = new IBk();
+		classifier.setOptions(new String[] { "-K", "43", "-W", "0", "-X", "-do-not-check-capabilities" });
+		LinearNNSearch lnns = new LinearNNSearch();
+		EuclideanDistance df = new EuclideanDistance();
+		df.setAttributeIndices("first-last");
+		lnns.setDistanceFunction(df);
+		classifier.setNearestNeighbourSearchAlgorithm(lnns);
+		classifier.buildClassifier(instances);
+		return classifier.classifyInstance(instances.get(instances.size() - 1));
+
 	}
 }

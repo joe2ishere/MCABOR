@@ -87,7 +87,7 @@ public class SMMakeARFFfromSQL {
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
 
-		String in;
+		 
 		PrintWriter pw = new PrintWriter(getFilename(sym, daysOut));
 		pw.println("% 1. Title: " + sym + "_smi_correlation");
 		pw.println("@RELATION " + sym + "_" + dos);
@@ -130,11 +130,7 @@ public class SMMakeARFFfromSQL {
 		pw.println("@DATA");
 
 		int arraypos[] = new int[smis.size()];
-		int pos = 0;
-		for (String key : smis.keySet()) {
-			arraypos[pos] = 0;
-		}
-		pos = 50;
+		int pos = 50;
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 

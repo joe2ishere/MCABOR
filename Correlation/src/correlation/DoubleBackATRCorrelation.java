@@ -341,7 +341,8 @@ public class DoubleBackATRCorrelation implements Runnable {
 											tabBest = new TopAndBottomList(10);
 											tops.put(key, tabBest);
 										}
-										int setAt = tabBest.setTop(abscorr,
+										//int setAt = 
+										tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.period,
 														functionDaysDiff, doubleBack, corr));
 //										if (setAt != -1) {

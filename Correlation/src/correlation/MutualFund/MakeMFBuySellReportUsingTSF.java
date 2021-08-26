@@ -147,11 +147,7 @@ public class MakeMFBuySellReportUsingTSF {
 				pwtest.print(tsfSW.toString());
 
 				int arraypos[] = new int[tsfs.size()];
-				int pos = 0;
-				for (String key : tsfs.keySet()) {
-					arraypos[pos] = 0;
-				}
-				pos = 50;
+				int pos = 50;
 				while (dates.get(pos).compareTo(startDate) < 0)
 					pos++;
 

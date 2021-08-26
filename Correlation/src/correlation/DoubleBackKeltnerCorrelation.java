@@ -343,7 +343,8 @@ public class DoubleBackKeltnerCorrelation implements Runnable {
 													& tabBest.getTopValue(i) >= abscorr)) {
 												continue nextDD;
 											}
-										int setAt = tabBest.setTop(abscorr,
+										//int setAt = 
+												tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.emaPeriod,
 														q.atrPeriod, q.emaMultiplier, keltnerfunctionDaysDiff,
 														keltnerDaysBack, corr));

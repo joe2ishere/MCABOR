@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format">
+
+	  <!-- defines the layout master -->
+	  <fo:layout-master-set>
+	   <fo:simple-page-master master-name="performance"
+	                           page-height="8.5in"
+	                           page-width="11in"
+	                           margin-top=".5in"
+	                           margin-bottom=".5in"
+	                           margin-left=".5in"
+	                           margin-right=".5in">
+	      <fo:region-body margin-top=".5in"/>
+	      <fo:region-before extent=".5in"/>
+	      <fo:region-after extent=".06in"/>
+	    </fo:simple-page-master>
+	  </fo:layout-master-set>
+
+	  <!-- starts actual layout -->
+	  <fo:page-sequence master-reference="performance">
+
+	 <fo:static-content flow-name="xsl-region-before">
+	      <!-- this defines a title level 1-->
+	   
+	      <fo:block  font-size="14pt"
+	            font-family="sans-serif"
+	            line-height="12pt"
+	            space-after.optimum="2pt"
+	            background-color="#B0C4DE"
+	            color="white"
+	            text-align="center"
+	            padding-top="3pt">
+	        ETF Expectations&#8482; - 30 Day Estimates Performance
+	     </fo:block>
+	 
+             <fo:block  font-size="8pt"
+	            font-family="sans-serif"
+	            line-height="6.25pt"
+	            space-after.optimum="2pt"
+	            background-color="#B0C4DE"
+	            color="black"
+	            text-align="right"
+	            padding-top="2pt">
+	       As of <<<<Current Report Date>>>>
+	     </fo:block>
+	  </fo:static-content>
+	  
+	  <fo:static-content flow-name="xsl-region-after">
+  		<fo:table table-layout="fixed" width="100%" border-collapse="separate"  vertical-align='middle'  display-align='center'>
+	     <fo:table-body>
+    
+     
+          <fo:table-row>
+           <fo:table-cell>
+            <fo:block  font-size="6.25pt"
+	            font-family="sans-serif"
+	            line-height="12pt"
+	            space-after.optimum="2pt"
+	            background-color="#B0C4DE"
+	            color="black"
+	            text-align="left"
+	            padding-top="2pt">
+	 	        contact: mcverry.report@gmail.com
+	 	    </fo:block>
+	 	   </fo:table-cell>
+	 	   <fo:table-cell>
+	        <fo:block  font-size="6.25pt"
+	            font-family="sans-serif"
+	            line-height="12pt"
+	            space-after.optimum="2pt"
+	            background-color="#B0C4DE"
+	            color="black"
+	            text-align="right"
+	            padding-top="2pt">
+	           &#169; <<<<COPYRIGHT YEAR>>>> - McVerry Report, LLC (USA)
+	        </fo:block>
+	       </fo:table-cell>
+	      </fo:table-row>
+	     </fo:table-body>
+	    </fo:table>
+	  </fo:static-content>
+
+
+	  <fo:flow flow-name="xsl-region-body">
+
+ <fo:table table-layout="fixed" width="100%" border-collapse="separate" text-align='center' vertical-align='middle'  display-align='center'>
+  <fo:table-header  font-size='9pt'  >
+   <fo:table-row >
+     <fo:table-cell  number-columns-spanned='6' background-color="#B0C4DE"><fo:block font-size='6.25pt'>Percentage Correct for Calls Made</fo:block></fo:table-cell>
+     
+   </fo:table-row>
+  
+   <fo:table-row >
+      
+          <fo:table-cell><fo:block>Date</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>All Calls % Correct</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Buy Calls % Correct</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Sell Calls % Correct</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Buy Calls - Average % Change</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Sell Calls - Average % Change</fo:block></fo:table-cell>
+     </fo:table-row>     
+    </fo:table-header>  
+    <fo:table-body   font-size='8.5pt'>
+           <!--   <<<<% correct for calls for date>>>> -->
+    </fo:table-body>
+</fo:table>
+
+<fo:block page-break-before="always"/>
+
+	     
+         
+ 
+<!-- table start -->
+ <fo:table table-layout="fixed" width="100%" border-collapse="separate" text-align='center' vertical-align='middle'  display-align='center'>
+   <fo:table-header  font-size='9pt' >
+     <fo:table-row>
+      <fo:table-cell  number-columns-spanned='32' background-color="#B0C4DE" ><fo:block font-size='6.25pt'>% Call Correct For Each Day Out</fo:block></fo:table-cell>
+       </fo:table-row>
+      <fo:table-row >
+          <fo:table-cell><fo:block>Run</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Date</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>1</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>2</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>3</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>4</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>5</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>6</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>7</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>8</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>9</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>10</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>11</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>12</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>13</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>14</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>15</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>16</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>17</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>18</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>19</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>20</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>21</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>22</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>23</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>24</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>25</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>26</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>27</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>28</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>29</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>30</fo:block></fo:table-cell>
+        </fo:table-row>
+      </fo:table-header>
+      <fo:table-body   font-size='8.5pt'>
+      <!--   <<<<data days out % call correct by date>>>> -->
+      
+      </fo:table-body>
+    </fo:table>
+    
+    <fo:block text-indent='.333in' font-size='12pt' space-before='.388in'>The above percentages are computed on per daily basis. 
+    Note that the ratios are more divergent than the "5 Days Performance Percentages" presented at the top main report. 
+    The daily inaccuracy is the main reason I prefer to use estimates based on averages over an extended period, such as 1-5 Days, 6 - 10 Days, etc.
+    </fo:block>
+    
+    
+    <fo:block page-break-before="always" space-before='.388in' font-size='9pt'>Notes:</fo:block>
+    <fo:block text-indent='.333in' font-size='6.25pt'>1. Percentage change calculation uses the closing price on the day of the report
+    divided into the closing price so many days out.  The abridged report found on the website performs a different calculation. The
+    website report uses the closing prices average within the projected period.  This report uses the closing price for the projected day.</fo:block>
+    <fo:block text-indent='.333in' font-size='6.25pt'>2. A Buy indicator must have a value greater than 7.75. 
+    Prior to 2021-08-26 the value was 6.75. </fo:block>
+    <fo:block text-indent='.333in' font-size='6.25pt'>3. A Sell indicator must have a value less than 1.25.
+    Prior to 2021-08-26 the sell value was 2.25.  </fo:block>
+     
+    <fo:block text-indent='.333in' font-size='6.25pt'>4. Category by ETFs Report - </fo:block>
+    	<fo:block text-indent='.66in' font-size='6.25pt'>4.1 does not include ETFs labeled with 
+	    "inverse" or "bear". </fo:block>
+    
+    	<fo:block text-indent='.66in' font-size='6.25pt'>4.2 does include leveraged ETFs (aka ETNs); since the
+	    report shows a "likeliness" of change and not a predicted percentage change. </fo:block>
+      
+    <fo:block text-indent='.333in' font-size='6.25pt'>5. The 5, 10, 15, etc. day period moving average functions 
+      are based exponential weighted (based on day period).
+      </fo:block>
+
+  <fo:block text-indent='.333in' font-size='6.25pt'>6. Changed report name to ETF Expectations.
+      2021-04-22
+   </fo:block>
+      
+  <fo:block text-indent='.333in' font-size='6.25pt'>7. Added new model that uses the errors of previous guesses as an attribute.
+      2021-05-20
+   </fo:block>
+      
+   
+	    </fo:flow>
+	</fo:page-sequence>
+  
+</fo:root>

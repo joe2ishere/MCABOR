@@ -219,8 +219,8 @@ public class CorrelationGraphASymbol {
 				sb.append(in + "\n");
 			}
 			brBad.close();
-			sb.append(theBadness.get("adx;" + daysOut) + ",");
-			sb.append(theBadness.get("atr;" + daysOut) + ",");
+//			sb.append(theBadness.get("adx;" + daysOut) + ",");
+//			sb.append(theBadness.get("atr;" + daysOut) + ",");
 //			sb.append(theBadness.get("bb;" + daysOut) + ",");
 			sb.append(theBadness.get("dmi;" + daysOut) + ",");
 			sb.append(theBadness.get("macd;" + daysOut) + ",");

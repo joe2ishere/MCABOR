@@ -96,6 +96,12 @@ public class NATRCorrelationEstimator extends CorrelationEstimator {
 
 	}
 
+	Classifier thisClassifier;
+
+	public Classifier getClassifier() {
+		return thisClassifier;
+	}
+
 	@Override
 	public double drun(Instances instances) throws Exception {
 		Classifier classifier = new IBk();

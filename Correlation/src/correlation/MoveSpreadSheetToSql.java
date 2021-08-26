@@ -3,12 +3,10 @@ package correlation;
 import java.io.FileInputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.TreeMap;
 
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
-import util.Averager;
 import util.getDatabaseConnection;
 
 public class MoveSpreadSheetToSql {
@@ -25,7 +23,7 @@ public class MoveSpreadSheetToSql {
 //			if (sheetDate.compareTo("2020-03-10") < 0)
 //				continue;
 			System.out.print(sheetDate + ";");
-			TreeMap<Integer, Averager> sheetDaysAverage = new TreeMap<>();
+			//TreeMap<Integer, Averager> sheetDaysAverage = new TreeMap<>();
 
 			Cell[] cellColumn = sheet.getColumn(0);
 			int row = -1;

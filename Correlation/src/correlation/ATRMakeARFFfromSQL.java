@@ -133,11 +133,8 @@ public class ATRMakeARFFfromSQL {
 		pw.println("@DATA");
 
 		int arraypos[] = new int[atrs.size()];
-		int pos = 0;
-		for (String key : atrs.keySet()) {
-			arraypos[pos] = 0;
-		}
-		pos = 50;
+		int pos = 50;
+		 
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 
