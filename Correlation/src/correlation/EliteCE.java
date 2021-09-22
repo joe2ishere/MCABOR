@@ -69,8 +69,9 @@ public class EliteCE extends CorrelationEstimator {
 
 		eliteList.add("qqq");
 		eliteList.add("tqqq");
+		eliteList.add("qld");
 		eliteList.add("sqqq");
-		;
+		eliteList.add("qid");
 
 		StringBuffer htmlMsg = new StringBuffer("<strong> <style> \n" + " table, th, td { border: 1px solid black; }"
 				+ "</style>\n<table><tr><th style='text-align: center;'>Symbol<th style='text-align: center;'>"
@@ -84,7 +85,7 @@ public class EliteCE extends CorrelationEstimator {
 			System.out.print(sym);
 			cePW.print(sym);
 			htmlMsg.append("<tr><td style='text-align: center;'>" + sym + "</td>\n");
-			Averager avverage = new Averager();
+
 			TreeMap<Integer, Averager> avgForDaysOut = new TreeMap<>();
 			for (int daysOut = 1; daysOut <= 5; daysOut++) {
 
@@ -95,7 +96,7 @@ public class EliteCE extends CorrelationEstimator {
 				ArrayList<Thread> threads = new ArrayList<>();
 				for (CorrelationEstimator ce : estimators) {
 
-					ce.setWork(sym, daysOut, avverage, priceBands, avgForDaysOut, theBadness);
+					ce.setWork(sym, daysOut, priceBands, avgForDaysOut, theBadness);
 					Thread th = new Thread(ce);
 					threads.add(th);
 					th.start();

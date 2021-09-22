@@ -26,7 +26,7 @@ public class BBCorrelationEstimator extends CorrelationEstimator {
 	public BBCorrelationEstimator(Connection conn) throws SQLException {
 		super(conn);
 		psSelect = conn.prepareStatement("select "
-				+ "symbol, toCloseDays, functionSymbol, period, stddev, functionDaysDiff, doubleBack, correlation  from bb_correlation"
+				+ "symbol, significantplace,  toCloseDays, functionSymbol, period, stddev, functionDaysDiff, doubleBack, correlation  from bb_correlation"
 				+ " where symbol = ? and toCloseDays = ?  order by symbol, toCloseDays, significantplace");
 		function = "bb";
 	}

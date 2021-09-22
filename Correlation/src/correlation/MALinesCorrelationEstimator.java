@@ -7,32 +7,36 @@ import java.sql.SQLException;
 import java.util.TreeMap;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
+import com.tictactec.ta.lib.Core;
 import com.tictactec.ta.lib.MAType;
 
-import StochasticMomentum.StochasticMomentum;
 import bands.DeltaBands;
+import movingAvgAndLines.MovingAvgAndLineIntercept;
 import weka.classifiers.Classifier;
-import weka.classifiers.lazy.IBk;
+import weka.classifiers.trees.RandomForest;
 import weka.core.Instances;
 
-public class SMICorrelationEstimator extends CorrelationEstimator {
+public class MALinesCorrelationEstimator extends CorrelationEstimator {
 
-	SMMakeARFFfromSQL makeSQL = new SMMakeARFFfromSQL(true);
+	Core core = new Core();
+	MALinesMakeARFFfromSQL makeSQL = new MALinesMakeARFFfromSQL(false);
 
-	public SMICorrelationEstimator(Connection conn) throws SQLException {
+	public MALinesCorrelationEstimator(Connection conn) throws SQLException {
 		super(conn);
-		psSelect = conn.prepareStatement("select " + "symbol,   toCloseDays, significantPlace,"
-				+ " functionSymbol, hiLowPeriod, maPeriod, smSmoothPeriod, smSignalPeriod, functionDaysDiff, doubleBack,"
-				+ " correlation  from sm_correlation"
-				+ " where symbol = ? and toCloseDays = ?   order by symbol, toCloseDays, significantplace");
-		function = "smi";
+		psSelect = conn.prepareStatement(
+				"select " + "symbol,   toCloseDays, significantPlace, functionSymbol, period, matype, correlation"
+						+ "  from  maline_correlation"
+						+ " where symbol = ? and toCloseDays = ?  order by symbol, toCloseDays, significantplace");
+		function = "mali";
 	}
 
 	@Override
 	public void buildHeaders(PrintWriter pw) throws Exception {
 
 		ResultSet rsSelect = psSelect.executeQuery();
+
 		myParms = new TreeMap<String, Object>();
+
 		nextFunctionSymbol: while (rsSelect.next()) {
 
 			String functionSymbol = rsSelect.getString("functionSymbol");
@@ -59,21 +63,26 @@ public class SMICorrelationEstimator extends CorrelationEstimator {
 			if (startDate.compareTo(pgsd.inDate[50]) < 0)
 				startDate = pgsd.inDate[50];
 
-			// hiLowPeriod, maPeriod, smSmoothPeriod, smSignalPeriod,
-			int hiLowPeriod = rsSelect.getInt("hiLowPeriod");
-			int maPeriod = rsSelect.getInt("maPeriod");
-			int smSmoothPeriod = rsSelect.getInt("smSmoothPeriod");
-			int smSignalPeriod = rsSelect.getInt("smSignalPeriod");
+			int period = rsSelect.getInt("period");
+			String matype = rsSelect.getString("maType");
+			MAType maType = null;
+			for (MAType types : MAType.values()) {
+				if (types.name().compareTo(matype) == 0) {
+					maType = types;
+					break;
+				}
+			}
 
-			StochasticMomentum sm = new StochasticMomentum(pgsd.inHigh, pgsd.inLow, pgsd.inClose, hiLowPeriod,
-					MAType.Ema, maPeriod, smSmoothPeriod, smSignalPeriod);
+			MovingAvgAndLineIntercept mal = new MovingAvgAndLineIntercept(pgsd, period, maType, period, maType);
 			String symKey = function + "_" + functionSymbol + "_" + rsSelect.getInt("significantPlace");
-			myParms.put(symKey, sm);
-			functionDaysDiffMap.put(symKey, rsSelect.getInt("functionDaysDiff"));
-			doubleBacks.put(symKey, rsSelect.getInt("doubleBack"));
-			pw.println("@ATTRIBUTE " + symKey + "smi NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "signal NUMERIC");
+			MaLineParmToPass ptp = new MaLineParmToPass(mal, pgsd.inClose, processDate);
+			myParms.put(symKey, ptp);
+			functionDaysDiffMap.put(symKey, 0);
+			pw.println("@ATTRIBUTE " + symKey + "maline1 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "maline2 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "maline3 NUMERIC");
 			dates.put(symKey, pgsd.inDate);
+
 		}
 
 	}
@@ -82,14 +91,21 @@ public class SMICorrelationEstimator extends CorrelationEstimator {
 	public void printAttributeData(int iday, int daysOutCalc, PrintWriter pw,
 			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
 			double[] inClose, DeltaBands priceBands) {
-		makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, functionDaysDiffMap, doubleBacks, arraypos, inClose,
-				priceBands, true);
+		try {
+			makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, arraypos, inClose, processDate, priceBands,
+					true);
+		} catch (Exception e) {
+
+			e.printStackTrace();
+			System.exit(0);
+		}
 
 	}
 
 	@Override
 	protected void getAttributeText(PrintWriter pw, Object myParm, int functionDaysDiff, int start, int doubleBack) {
-		pw.print(makeSQL.getAttributeText((StochasticMomentum) myParm, functionDaysDiff, start, doubleBack));
+
+		makeSQL.getAttributeText(pw, (MaLineParmToPass) myParm, functionDaysDiff);
 
 	}
 
@@ -101,10 +117,7 @@ public class SMICorrelationEstimator extends CorrelationEstimator {
 
 	@Override
 	public double drun(Instances instances) throws Exception {
-		Classifier classifier = new IBk();
-		String args[] = { "-I" };
-		((IBk) classifier).setOptions(args);
-
+		Classifier classifier = new RandomForest();
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
 	}

@@ -7,11 +7,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -23,16 +20,6 @@ import util.getDatabaseConnection;
 import utils.TopAndBottomList;
 
 public class DoubleBackADXCorrelation implements Runnable {
-
-	static TreeMap<String, Integer> symList = new TreeMap<>();
-
-	static TreeMap<String, GetETFDataUsingSQL> gsds = new TreeMap<>();
-
-	double bestCorrelation = 0;
-
-	static ArrayList<String> doneList = new ArrayList<>();
-
-	TreeMap<String, TopAndBottomList> tops = new TreeMap<>();
 
 	static public class Queue {
 		String sym;
@@ -47,63 +34,16 @@ public class DoubleBackADXCorrelation implements Runnable {
 
 	}
 
-	static PreparedStatement countDone;
-
-	static ArrayList<String> updateSymbol = CorrelationUpdateAllOrSome.getUpdateSymbolList();;
-	static TreeMap<String, Integer> alreadyDoneCount = new TreeMap<>();
-
 	public static void main(String[] args) throws Exception {
 
-		System.out.println(updateSymbol == null ? "Updating all symbols" : "partial update");
-
 		Connection conn = getDatabaseConnection.makeConnection();
-		countDone = conn.prepareStatement("select count(*) from adx_correlation where symbol = ? and toCloseDays = ?");
-		PreparedStatement psLastDate = conn
-				.prepareStatement("select distinct txn_date from etfprices order by txn_date desc limit 1");
-		ResultSet rsLastDate = psLastDate.executeQuery();
-		if (rsLastDate.next() == false) {
-			System.out.println("end of date error");
-			System.exit(0);
-		}
-		String latestDate = rsLastDate.getString(1);
-		PreparedStatement ps = conn.prepareStatement(
-				"select symbol, AVG(volume) AS vavg, count(*) as txncnt  from etfprices  GROUP BY symbol ORDER BY symbol");
-		ResultSet rs = ps.executeQuery();
 
-		while (rs.next()) {
-
-			String sym = rs.getString(1).toLowerCase();
-			double vol = rs.getDouble(2);
-			int cnt = rs.getInt(3);
-
-			if (vol < 10000) {
-				System.out.println("skipping " + sym + " with vol of " + vol);
-				continue;
-			}
-
-			if (cnt < 2000) {
-				System.out.println("skipping " + sym + " with cnt of " + cnt);
-				continue;
-
-			}
-
-			GetETFDataUsingSQL pgsd = GetETFDataUsingSQL.getInstance(sym);
-			if (pgsd.inDate[pgsd.inDate.length - 1].compareTo(latestDate) != 0) {
-				System.out.println("skipping " + sym + " with end date of  " + pgsd.inDate[pgsd.inDate.length - 1]);
-				continue;
-
-			}
-
-			gsds.put(sym, pgsd);
-			symList.put(sym, cnt);
-
-		}
-
+		CorrelationUpdate cu = new CorrelationUpdate(conn);
 		// System.exit(0);
 
 		int threadCount = 6;
 		BlockingQueue<Queue> adxQue = new ArrayBlockingQueue<Queue>(threadCount);
-		DoubleBackADXCorrelation corrs = new DoubleBackADXCorrelation(adxQue);
+		DoubleBackADXCorrelation corrs = new DoubleBackADXCorrelation(adxQue, cu);
 		corrs.loadTables();
 
 		for (int i = 0; i < threadCount; i++) {
@@ -113,11 +53,11 @@ public class DoubleBackADXCorrelation implements Runnable {
 
 		Core core = new Core();
 
-		for (String adxSym : symList.keySet()) {
-			if (doneList.contains(adxSym))
+		for (String adxSym : cu.symList.keySet()) {
+			if (cu.doneList.contains(adxSym))
 				continue;
-			GetETFDataUsingSQL adxGSD = gsds.get(adxSym);
-			if (symList.get(adxSym) < 2000)
+			GetETFDataUsingSQL adxGSD = cu.gsds.get(adxSym);
+			if (cu.symList.get(adxSym) < cu.entryLimit)
 				continue;
 			System.out.println("running " + adxSym);
 
@@ -156,9 +96,11 @@ public class DoubleBackADXCorrelation implements Runnable {
 	}
 
 	BlockingQueue<Queue> queuedGSD;
+	CorrelationUpdate cu;
 
-	public DoubleBackADXCorrelation(BlockingQueue<Queue> adxQue) {
+	public DoubleBackADXCorrelation(BlockingQueue<Queue> adxQue, CorrelationUpdate cu) {
 		this.queuedGSD = adxQue;
+		this.cu = cu;
 
 	}
 
@@ -175,9 +117,9 @@ public class DoubleBackADXCorrelation implements Runnable {
 			FileReader fr = new FileReader(doneFile);
 			BufferedReader br = new BufferedReader(fr);
 			String in = "";
-			if (updateSymbol == null) {
+			if (cu.updateSymbol == null) {
 				while ((in = br.readLine()) != null)
-					doneList.add(in.trim());
+					cu.doneList.add(in.trim());
 			}
 			fr.close();
 			fr = new FileReader(tabFile);
@@ -185,10 +127,10 @@ public class DoubleBackADXCorrelation implements Runnable {
 			in = "";
 			while ((in = br.readLine()) != null) {
 
-				TopAndBottomList tab = tops.get(in);
+				TopAndBottomList tab = cu.tops.get(in);
 				if (tab == null) {
 					tab = new TopAndBottomList(10);
-					tops.put(in, tab);
+					cu.tops.put(in, tab);
 				}
 				for (int i = 0; i < tab.size; i++) {
 					in = br.readLine();
@@ -240,11 +182,11 @@ public class DoubleBackADXCorrelation implements Runnable {
 			return;
 		}
 		PrintWriter pw = new PrintWriter(fw);
-		synchronized (tops) {
+		synchronized (cu.tops) {
 
-			for (String key : tops.keySet()) {
+			for (String key : cu.tops.keySet()) {
 				pw.println(key);
-				TopAndBottomList tab = tops.get(key);
+				TopAndBottomList tab = cu.tops.get(key);
 				synchronized (tab) {
 					for (int i = 0; i < tab.size; i++) {
 						pw.println(i + ":" + tab.getTopValue(i) + ":" + tab.getTopDescription()[i]);
@@ -270,12 +212,12 @@ public class DoubleBackADXCorrelation implements Runnable {
 				if (qSymbol.compareTo("<<<STOP>>>") == 0)
 					return;
 
-				for (String closingSymbol : symList.keySet()) {
-					if (updateSymbol != null)
-						if (updateSymbol.contains(closingSymbol) == false)
+				for (String closingSymbol : cu.symList.keySet()) {
+					if (cu.updateSymbol != null)
+						if (cu.updateSymbol.contains(closingSymbol) == false)
 							continue;
 
-					GetETFDataUsingSQL closingGSD = gsds.get(closingSymbol);
+					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
 
 					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= 30; pricefunctionDaysDiff += 1) {
 
@@ -334,12 +276,12 @@ public class DoubleBackADXCorrelation implements Runnable {
 										continue;
 									double abscorr = Math.abs(corr);
 									String key = closingSymbol + "_" + pricefunctionDaysDiff;
-									synchronized (tops) {
+									synchronized (cu.tops) {
 
-										TopAndBottomList tabBest = tops.get(key);
+										TopAndBottomList tabBest = cu.tops.get(key);
 										if (tabBest == null) {
 											tabBest = new TopAndBottomList(10);
-											tops.put(key, tabBest);
+											cu.tops.put(key, tabBest);
 										}
 										int setAt = tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.period,
@@ -359,9 +301,9 @@ public class DoubleBackADXCorrelation implements Runnable {
 										}
 									}
 
-									if (abscorr > bestCorrelation) {
+									if (abscorr > cu.bestCorrelation) {
 										System.out.println("best correlation " + Math.abs(corr));
-										bestCorrelation = abscorr;
+										cu.bestCorrelation = abscorr;
 									}
 
 								}

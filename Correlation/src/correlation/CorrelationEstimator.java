@@ -75,8 +75,8 @@ public abstract class CorrelationEstimator implements Runnable {
 	static String pdfEndRow = "</fo:table-row>";
 	static String pdfDataCell = "<fo:table-cell><fo:block background-color='%c'>%s</fo:block></fo:table-cell>\n";
 
-	static double buyIndicatorLimit = 7.75;
-	static double sellIndicatorLimit = 1.25;
+	static double buyIndicatorLimit = 6.9999;
+	static double sellIndicatorLimit = 2.0001;
 
 	static File resultsForDBFile;
 	static PrintWriter resultsForDBPrintWriter;
@@ -94,6 +94,8 @@ public abstract class CorrelationEstimator implements Runnable {
 	Averager worstLow = new Averager();
 
 	static boolean doingElite = false;
+
+	String processDate;
 
 	public void setDoElite() {
 		doingElite = true;
@@ -278,6 +280,8 @@ public abstract class CorrelationEstimator implements Runnable {
 
 		estimators.add(new DMICorrelationEstimator(conn));
 		estimators.add(new MACDCorrelationEstimator(conn));
+		estimators.add(new MALinesCorrelationEstimator(conn));
+		estimators.add(new SMICorrelationEstimator(conn));
 		estimators.add(new TSFCorrelationEstimator(conn));
 
 		StringBuffer etfExpectations = new StringBuffer();
@@ -287,7 +291,7 @@ public abstract class CorrelationEstimator implements Runnable {
 
 		for (String sym : gsds.keySet()) {
 
-//			if (sym.startsWith("epv") == false)
+//			if (sym.startsWith("eurl") == false)
 //				continue;
 			if (debugging) {
 
@@ -321,7 +325,6 @@ public abstract class CorrelationEstimator implements Runnable {
 
 			StringBuffer sqlBuffer = new StringBuffer();
 
-			Averager avverage = new Averager();
 			TreeMap<Integer, Averager> avgForDaysOut = new TreeMap<>();
 
 			TreeMap<Integer, Averager> catAvg = null;
@@ -339,7 +342,7 @@ public abstract class CorrelationEstimator implements Runnable {
 
 				ArrayList<Thread> threads = new ArrayList<>();
 				for (CorrelationEstimator ce : estimators) {
-					ce.setWork(sym, daysOut, avverage, priceBands, avgForDaysOut, theBadness);
+					ce.setWork(sym, daysOut, priceBands, avgForDaysOut, theBadness);
 					Thread th = new Thread(ce);
 					threads.add(th);
 					th.start();
@@ -362,7 +365,10 @@ public abstract class CorrelationEstimator implements Runnable {
 				brBad.close();
 				sb.append(theBadness.get("dmi;" + daysOut) + ",");
 				sb.append(theBadness.get("macd;" + daysOut) + ",");
+				sb.append(theBadness.get("mali;" + daysOut) + ",");
+				sb.append(theBadness.get("smi;" + daysOut) + ",");
 				sb.append(theBadness.get("tsf;" + daysOut) + ",");
+
 				sb.append("?");
 				Instances instances = new Instances(new StringReader(sb.toString()));
 				int classPos = instances.numAttributes() - 1;
@@ -371,9 +377,9 @@ public abstract class CorrelationEstimator implements Runnable {
 				classifier.buildClassifier(instances);
 				double got = classifier.classifyInstance(instances.get(instances.size() - 1));
 				avgForDaysOut.get(daysOut).add(got, daysOut / 5);
-				// daysOut / 5 is a weight that shows that
-				// the lower dates are less effective and the higher dates are much more
-				// effective
+//				// daysOut / 5 is a weight that shows that
+//				// the lower dates are less effective and the higher dates are much more
+//				// effective
 
 			}
 
@@ -425,6 +431,7 @@ public abstract class CorrelationEstimator implements Runnable {
 				averages[daysOut - 1] = avgForDaysOut.get(daysOut).get();
 			}
 			boolean buySellWrittenToWebPage = false;
+			Averager avverager = new Averager();
 			for (int daysOut = 4, tdc = 1; daysOut <= 29; daysOut += 5, tdc++) {
 
 				Averager outAvg = new Averager();
@@ -432,6 +439,7 @@ public abstract class CorrelationEstimator implements Runnable {
 					outAvg.add(averages[daysOut - (4 - daysBack)], (daysBack + 1) * (daysBack + 1));
 				}
 
+				avverager.add(outAvg.get());
 				System.out.print(";" + df.format(outAvg.get()));
 				averageOutPW.print(";" + df.format(outAvg.get()));
 
@@ -496,8 +504,8 @@ public abstract class CorrelationEstimator implements Runnable {
 			}
 
 			webSiteReportSB.append("</tr>");
-			System.out.println(";" + df.format(avverage.get()/* + ";" + overAllAverageStrength.get() */));
-			averageOutPW.println(";" + df.format(avverage.get()/* + ";" + overAllAverageStrength.get() */));
+			System.out.println(";" + df.format(avverager.get()/* + ";" + overAllAverageStrength.get() */));
+			averageOutPW.println(";" + df.format(avverager.get()/* + ";" + overAllAverageStrength.get() */));
 			rawDataCSVPW.println();
 
 			averageOutPW.flush();
@@ -510,7 +518,7 @@ public abstract class CorrelationEstimator implements Runnable {
 				etfExpectationsAbridged.append(pdfEndRow);
 			}
 
-			etfExpectations.append(formatPDFCell(avverage.get()));
+			etfExpectations.append(formatPDFCell(avverager.get()));
 			etfExpectations.append(pdfEndRow);
 //			for (String key : threadRunAverages.keySet()) {
 //				System.out.println(key + ";" + threadRunAverages.get(key).get());
@@ -635,148 +643,12 @@ public abstract class CorrelationEstimator implements Runnable {
 		}
 		StringBuffer emailText = new StringBuffer();
 
-		emailText.append("The " + wordsCapitalized(catOverallAverages.getTopDescription()[0]) + " sector has the best "
-				+ " overall forecast for the next 30 trading days, with an average score of "
-				+ df.format(catOverallAverages.getTopValue(0)) + ". ");
-
-		String besties[] = tabLookAhead.getTopDescription()[0].split("<");
-		boolean bestOrTop = ThreadLocalRandom.current().nextBoolean();
-		if (besties[0].compareTo(catOverallAverages.getTopDescription()[0]) == 0) {
-			emailText.append(" And the ");
+		if ((catOverallAverages.getTopValue(0) - 4.5) > (4.5 - catOverallAverages.getBottomValue(0))) {
+			topReport(true, emailText, catOverallAverages, tabLookAhead, catETFList);
+			bottomReport(false, emailText, catOverallAverages, tabLookAhead, catETFList);
 		} else {
-			emailText.append(" The ");
-
-		}
-
-		emailText.append(wordsCapitalized(besties[0]) + " sector has " + (bestOrTop ? "the best" : "a good"));
-		bestOrTop = ThreadLocalRandom.current().nextBoolean();
-		emailText.append(" short-term " + (bestOrTop ? "prediction" : "prospect") + ", which should occur in "
-				+ besties[1] + " days. ");
-
-		emailText.append("The computed average is " + df.format(tabLookAhead.getTopValue(0)) + ". ");
-
-		String catSyms[] = catETFList.get(besties[0]).toString().split(" ");
-		TopAndBottomList topsym = new TopAndBottomList();
-		String periods[] = besties[1].split(" ");
-		int p1 = Integer.parseInt(periods[0]);
-		int p2 = Integer.parseInt(periods[2]);
-
-		for (String csym : catSyms) {
-			double avg[] = symbolDailyAverages.get(csym);
-			if (avg == null)
-				continue;
-			for (int i = p1; i <= p2; i++) {
-				topsym.setTop(avg[i], csym);
-			}
-		}
-
-		bestOrTop = ThreadLocalRandom.current().nextBoolean();
-		emailText.append(
-				" The estimated " + (bestOrTop ? "best" : "top") + " ETF in that " + (bestOrTop ? "sector" : "category")
-						+ " for that period is $" + topsym.getTopDescription()[0].toUpperCase() + ". ");
-
-		for (int i = 1; i < 10; i++) {
-			if (tabLookAhead.getTopDescription()[i].startsWith(besties[0]) == false
-					& tabLookAhead.getTopValue(i) > 4.5) {
-				besties = tabLookAhead.getTopDescription()[i].split("<");
-				periods = besties[1].split(" ");
-				int p11 = Integer.parseInt(periods[0]);
-				int p21 = Integer.parseInt(periods[2]);
-				topsym = new TopAndBottomList();
-				besties = tabLookAhead.getTopDescription()[i].split("<");
-				bestOrTop = ThreadLocalRandom.current().nextBoolean();
-				emailText.append(" Next is followed by the " + wordsCapitalized(besties[0]) + " sector with a "
-						+ (bestOrTop ? "good" : "better than average") + " forecast");
-				if (p11 == p1 & p21 == p2)
-					emailText.append(" for the same time frame. ");
-				else
-					emailText.append(" in " + besties[1] + " days.");
-
-				catSyms = catETFList.get(besties[0]).toString().split(" ");
-				for (String csym : catSyms) {
-					double avg[] = symbolDailyAverages.get(csym);
-					if (avg == null)
-						continue;
-					for (i = p1; i <= p2; i++) {
-						topsym.setTop(avg[i], csym);
-					}
-				}
-				bestOrTop = ThreadLocalRandom.current().nextBoolean();
-				emailText.append(
-						" The estimated " + (bestOrTop ? "best" : "top") + " ETF in this sector for the period is $"
-								+ topsym.getTopDescription()[0].toUpperCase() + ". ");
-
-				break;
-			}
-		}
-
-		boolean contrastOrSell = ThreadLocalRandom.current().nextBoolean();
-		emailText.append("<p>" + (contrastOrSell ? "In contrast" : "On the sell side") + ", the "
-				+ wordsCapitalized(catOverallAverages.getBottomDescription()[0]) + " sector has the worst "
-				+ " overall view for the next 30 trading days with an average score of "
-				+ df.format(catOverallAverages.getBottomValue(0)) + ". ");
-
-		boolean worseOrLowest = ThreadLocalRandom.current().nextBoolean();
-		besties = tabLookAhead.getBottomDescription()[0].split("<");
-		if (besties[0].compareTo(catOverallAverages.getBottomDescription()[0]) == 0) {
-			emailText.append(" Also, the ");
-		} else {
-			emailText.append(" The ");
-
-		}
-
-		emailText.append(
-				wordsCapitalized(besties[0]) + " sector has " + (worseOrLowest ? "a poor" : "an underperforming")
-						+ " prospect in the " + besties[1] + " day period; ");
-
-		emailText.append("The computed average is " + df.format(tabLookAhead.getBottomValue(0)) + ".");
-
-		topsym = new TopAndBottomList();
-		periods = besties[1].split(" ");
-		p1 = Integer.parseInt(periods[0]);
-		p2 = Integer.parseInt(periods[2]);
-		catSyms = catETFList.get(besties[0]).toString().split(" ");
-		for (String csym : catSyms) {
-			double avg[] = symbolDailyAverages.get(csym);
-			if (avg == null)
-				continue;
-			for (int i = p1; i <= p2; i++) {
-				topsym.setBottom(avg[i], csym);
-			}
-		}
-		worseOrLowest = ThreadLocalRandom.current().nextBoolean();
-
-		emailText.append(" In this sector, $" + topsym.getBottomDescription()[0].toUpperCase() + " may have the "
-				+ (worseOrLowest ? "worst" : "lowest") + " results. ");
-
-		for (int i = 1; i < 10; i++) {
-			if (tabLookAhead.getBottomDescription()[i].startsWith(besties[0]) == false
-					& tabLookAhead.getBottomValue(i) < 4.5) {
-				besties = tabLookAhead.getBottomDescription()[i].split("<");
-				periods = besties[1].split(" ");
-				int p11 = Integer.parseInt(periods[0]);
-				int p21 = Integer.parseInt(periods[2]);
-				emailText.append(
-						" Coming in second with a weak prospect is the " + wordsCapitalized(besties[0]) + " sector ");
-				if (p11 == p1 & p21 == p2)
-					emailText.append("for the same period. ");
-				else
-					emailText.append("in " + besties[1] + " days,");
-				topsym = new TopAndBottomList();
-				catSyms = catETFList.get(besties[0]).toString().split(" ");
-				for (String csym : catSyms) {
-					double avg[] = symbolDailyAverages.get(csym);
-					if (avg == null)
-						continue;
-					for (i = p1; i <= p2; i++) {
-						topsym.setBottom(avg[i], csym);
-					}
-				}
-				worseOrLowest = ThreadLocalRandom.current().nextBoolean();
-				emailText.append(" with the ETF $" + topsym.getBottomDescription()[0].toUpperCase()
-						+ " expected to finish the " + (worseOrLowest ? "worst" : "lowest") + " in this group. ");
-				break;
-			}
+			bottomReport(true, emailText, catOverallAverages, tabLookAhead, catETFList);
+			topReport(false, emailText, catOverallAverages, tabLookAhead, catETFList);
 		}
 
 		FileReader fr = new FileReader("xmlFilesForPDFReports/Report-FO.xml");
@@ -878,7 +750,9 @@ public abstract class CorrelationEstimator implements Runnable {
 		merger.mergeDocuments(MemoryUsageSetting.setupMainMemoryOnly());
 		boolean lastDayOfWeek = isTodayLastDayOfWeek();
 		Logger logr = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
-		FileHandler handler = new FileHandler("c:/users/joe/correlationOutput/mailOut-log.%u.%g.txt", true);
+		String logFileName = String.format("c:/users/joe/correlationOutput/mailOut-log." + currentMktDate + ".txt");
+
+		FileHandler handler = new FileHandler(logFileName, true);
 		handler.setFormatter(new SimpleFormatter());
 		logr.addHandler(handler);
 		logr.setLevel(Level.ALL);
@@ -1022,6 +896,170 @@ public abstract class CorrelationEstimator implements Runnable {
 
 	}
 
+	static public void topReport(boolean starter, StringBuffer emailText, TopAndBottomList catOverallAverages,
+			TopAndBottomList tabLookAhead, TreeMap<String, StringBuffer> catETFList) {
+
+		boolean contrast = ThreadLocalRandom.current().nextBoolean();
+		if (starter)
+			emailText.append("The ");
+		else
+			emailText.append("<p>" + (contrast ? "In contrast" : "On the buy side") + ", the ");
+
+		emailText.append(wordsCapitalized(catOverallAverages.getTopDescription()[0]) + " sector has the best "
+				+ " overall forecast for the next 30 trading days, with an average score of "
+				+ df.format(catOverallAverages.getTopValue(0)) + ". ");
+
+		String besties[] = tabLookAhead.getTopDescription()[0].split("<");
+		boolean bestOrTop = ThreadLocalRandom.current().nextBoolean();
+		if (besties[0].compareTo(catOverallAverages.getTopDescription()[0]) == 0) {
+			emailText.append(" And the ");
+		} else {
+			emailText.append(" The ");
+
+		}
+
+		emailText.append(wordsCapitalized(besties[0]) + " sector has " + (bestOrTop ? "the best" : "a good"));
+		bestOrTop = ThreadLocalRandom.current().nextBoolean();
+		emailText.append(" short-term " + (bestOrTop ? "prediction" : "prospect") + ", which should occur in "
+				+ besties[1] + " days. ");
+
+		emailText.append("The computed average is " + df.format(tabLookAhead.getTopValue(0)) + ". ");
+
+		String catSyms[] = catETFList.get(besties[0]).toString().split(" ");
+		TopAndBottomList topsym = new TopAndBottomList();
+		String periods[] = besties[1].split(" ");
+		int p1 = Integer.parseInt(periods[0]);
+		int p2 = Integer.parseInt(periods[2]);
+
+		for (String csym : catSyms) {
+			double avg[] = symbolDailyAverages.get(csym);
+			if (avg == null)
+				continue;
+			for (int i = p1; i <= p2; i++) {
+				topsym.setTop(avg[i], csym);
+			}
+		}
+
+		bestOrTop = ThreadLocalRandom.current().nextBoolean();
+		emailText.append(
+				" The estimated " + (bestOrTop ? "best" : "top") + " ETF in that " + (bestOrTop ? "sector" : "category")
+						+ " for that period is $" + topsym.getTopDescription()[0].toUpperCase() + ". ");
+
+		for (int i = 1; i < 10; i++) {
+			if (tabLookAhead.getTopDescription()[i].startsWith(besties[0]) == false
+					& tabLookAhead.getTopValue(i) > 4.5) {
+				besties = tabLookAhead.getTopDescription()[i].split("<");
+				periods = besties[1].split(" ");
+				int p11 = Integer.parseInt(periods[0]);
+				int p21 = Integer.parseInt(periods[2]);
+				topsym = new TopAndBottomList();
+				besties = tabLookAhead.getTopDescription()[i].split("<");
+				bestOrTop = ThreadLocalRandom.current().nextBoolean();
+				emailText.append(" Next is followed by the " + wordsCapitalized(besties[0]) + " sector with a "
+						+ (bestOrTop ? "good" : "better than average") + " forecast");
+				if (p11 == p1 & p21 == p2)
+					emailText.append(" for the same time frame. ");
+				else
+					emailText.append(" in " + besties[1] + " days. ");
+				emailText.append("The computed average is " + df.format(tabLookAhead.getTopValue(i)) + ". ");
+				catSyms = catETFList.get(besties[0]).toString().split(" ");
+				for (String csym : catSyms) {
+					double avg[] = symbolDailyAverages.get(csym);
+					if (avg == null)
+						continue;
+					for (i = p1; i <= p2; i++) {
+						topsym.setTop(avg[i], csym);
+					}
+				}
+				bestOrTop = ThreadLocalRandom.current().nextBoolean();
+				emailText.append(
+						" The estimated " + (bestOrTop ? "best" : "top") + " ETF in this sector for the period is $"
+								+ topsym.getTopDescription()[0].toUpperCase() + ". ");
+
+				break;
+			}
+		}
+
+	}
+
+	static void bottomReport(boolean starter, StringBuffer emailText, TopAndBottomList catOverallAverages,
+			TopAndBottomList tabLookAhead, TreeMap<String, StringBuffer> catETFList) {
+
+		boolean contrast = ThreadLocalRandom.current().nextBoolean();
+		if (starter)
+			emailText.append("The ");
+		else
+			emailText.append("<p>" + (contrast ? "In contrast" : "On the sell side") + ", the ");
+		emailText.append(wordsCapitalized(catOverallAverages.getBottomDescription()[0]) + " sector has the worst "
+				+ " overall view for the next 30 trading days, with an average score of "
+				+ df.format(catOverallAverages.getBottomValue(0)) + ". ");
+
+		boolean worseOrLowest = ThreadLocalRandom.current().nextBoolean();
+		String besties[] = tabLookAhead.getBottomDescription()[0].split("<");
+		if (besties[0].compareTo(catOverallAverages.getBottomDescription()[0]) == 0) {
+			emailText.append(" Also, the ");
+		} else {
+			emailText.append(" The ");
+
+		}
+
+		emailText.append(
+				wordsCapitalized(besties[0]) + " sector has " + (worseOrLowest ? "a poor" : "an underperforming")
+						+ " prospect in the " + besties[1] + " day period; ");
+
+		emailText.append("the computed average is " + df.format(tabLookAhead.getBottomValue(0)) + ".");
+
+		TopAndBottomList topsym = new TopAndBottomList();
+		String periods[] = besties[1].split(" ");
+		int p1 = Integer.parseInt(periods[0]);
+		int p2 = Integer.parseInt(periods[2]);
+		String catSyms[] = catETFList.get(besties[0]).toString().split(" ");
+		for (String csym : catSyms) {
+			double avg[] = symbolDailyAverages.get(csym);
+			if (avg == null)
+				continue;
+			for (int i = p1; i <= p2; i++) {
+				topsym.setBottom(avg[i], csym);
+			}
+		}
+		worseOrLowest = ThreadLocalRandom.current().nextBoolean();
+
+		emailText.append(" In this sector, $" + topsym.getBottomDescription()[0].toUpperCase() + " may have the "
+				+ (worseOrLowest ? "worst" : "lowest") + " results. ");
+
+		for (int i = 1; i < 10; i++) {
+			if (tabLookAhead.getBottomDescription()[i].startsWith(besties[0]) == false
+					& tabLookAhead.getBottomValue(i) < 4.5) {
+				besties = tabLookAhead.getBottomDescription()[i].split("<");
+				periods = besties[1].split(" ");
+				int p11 = Integer.parseInt(periods[0]);
+				int p21 = Integer.parseInt(periods[2]);
+				emailText.append(
+						" Coming in second with a weak prospect is the " + wordsCapitalized(besties[0]) + " sector ");
+				if (p11 == p1 & p21 == p2)
+					emailText.append("for the same period. ");
+				else
+					emailText.append("in " + besties[1] + " days.");
+				emailText.append(" The computed average is " + df.format(tabLookAhead.getBottomValue(i)) + ".");
+				topsym = new TopAndBottomList();
+				catSyms = catETFList.get(besties[0]).toString().split(" ");
+				for (String csym : catSyms) {
+					double avg[] = symbolDailyAverages.get(csym);
+					if (avg == null)
+						continue;
+					for (i = p1; i <= p2; i++) {
+						topsym.setBottom(avg[i], csym);
+					}
+				}
+				worseOrLowest = ThreadLocalRandom.current().nextBoolean();
+				emailText.append(" The models expect the ETF $" + topsym.getBottomDescription()[0].toUpperCase()
+						+ " to finish the " + (worseOrLowest ? "worst" : "lowest") + " in this group. ");
+				break;
+			}
+		}
+
+	}
+
 	static String wordsCapitalized(String in) {
 		StringBuffer sb = new StringBuffer();
 		String words[] = in.split(" ");
@@ -1078,7 +1116,6 @@ public abstract class CorrelationEstimator implements Runnable {
 	int daysOut;
 	String startDate;
 
-	Averager averager;
 	DeltaBands priceBands;
 
 	static String currentMktDate;
@@ -1086,8 +1123,8 @@ public abstract class CorrelationEstimator implements Runnable {
 
 	TreeMap<String, Double> theBadness;
 
-	public void setWork(String sym, int daysOut, Averager average, DeltaBands priceBands,
-			TreeMap<Integer, Averager> smiaverageForDaysOut, TreeMap<String, Double> theBadness) throws Exception {
+	public void setWork(String sym, int daysOut, DeltaBands priceBands, TreeMap<Integer, Averager> smiaverageForDaysOut,
+			TreeMap<String, Double> theBadness) throws Exception {
 
 		this.sym = sym;
 		this.daysOut = daysOut;
@@ -1097,7 +1134,6 @@ public abstract class CorrelationEstimator implements Runnable {
 		doubleBacks = new TreeMap<>();
 		dates = new TreeMap<>();
 
-		this.averager = average;
 		this.priceBands = priceBands;
 
 		this.avgForDaysOut = smiaverageForDaysOut;
@@ -1125,7 +1161,7 @@ public abstract class CorrelationEstimator implements Runnable {
 		pw.println("@RELATION " + sym);
 		int pos = 50;
 		GetETFDataUsingSQL gsd = gsds.get(sym);
-		startDate = gsd.inDate[50];
+		startDate = gsd.inDate[pos];
 		try {
 			buildHeaders(pw);
 		} catch (Exception e1) {
@@ -1134,6 +1170,13 @@ public abstract class CorrelationEstimator implements Runnable {
 			System.exit(0);
 			return null;
 		}
+
+		for (String key : dates.keySet()) {
+			String datess[] = dates.get(key);
+			if (datess[50].compareTo(startDate) > 0)
+				startDate = datess[50];
+		}
+
 		pw.println("@ATTRIBUTE class NUMERIC");
 
 //		pw.println(priceBands.getAttributeDefinition());
@@ -1144,7 +1187,6 @@ public abstract class CorrelationEstimator implements Runnable {
 			return null;
 		int arraypos[] = new int[myParms.size()];
 		pos = 0;
-
 		arraypos[pos] = 0;
 //		boolean testCloseChange = gsd.inClose[gsd.inClose.length - 1] > gsd.inClose[gsd.inClose.length - 2];
 
@@ -1211,7 +1253,7 @@ public abstract class CorrelationEstimator implements Runnable {
 			String endDate = gsd.inDate[iday + daysOut];
 			if (daysOutCalc != daysOut)
 				System.out.println(posDate + " here " + endDate + " by " + daysOutCalc + " not " + daysOut);
-			// pw.print(gsd.inDate[iday] + ",");
+			processDate = gsd.inDate[iday];
 			printAttributeData(iday, daysOutCalc, pw, functionDaysDiffMap, doubleBacks, arraypos, gsd.inClose,
 					priceBands);
 			iday++;
@@ -1293,14 +1335,6 @@ public abstract class CorrelationEstimator implements Runnable {
 				}
 				// System.out.println("\n"+this.getClass().getSimpleName() + ";" + got);
 				thisDaysAverage.add(got);
-				double funcAvg = .5;
-				ArrayList<Averager> funcAverages = functionDayAverager.get(this.function);
-				if (funcAverages != null) {
-					Averager funcDayAverage = funcAverages.get(daysOut);
-					if (funcDayAverage != null)
-						funcAvg = funcDayAverage.get();
-				}
-				averager.add(got, funcAvg);
 
 			}
 

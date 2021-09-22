@@ -18,16 +18,14 @@ public class BuildSQLTable {
 	public static void main(String args[]) throws Exception {
 
 //		adxmain(args);
-//		atrmain(args);
 ////		bbmain(args);
-////		ccimain(args);
+
 //		dmimain(args);
-////		keltnermain(args);
+//		malinemain(args);
 //		macdmain(args);
-////		natrmain(args);
 ////
-		smimain(args);
-//		tsfmain(args);
+//		smimain(args);
+		tsfmain(args);
 
 	}
 
@@ -96,6 +94,8 @@ public class BuildSQLTable {
 
 		conn.setAutoCommit(false);
 		while ((in = br.readLine()) != null) {
+			if (in.contains("set"))
+				continue;
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement(
@@ -122,50 +122,6 @@ public class BuildSQLTable {
 		conn.close();
 	}
 
-	public static void keltnermain(String[] args) throws Exception {
-		Connection conn = getDatabaseConnection.makeConnection();
-
-		LogManager.getLogManager().reset();
-
-		final PreparedStatement stInsert = conn.prepareStatement("insert into keltner_correlation"
-				+ "(symbol, toCloseDays, significantPlace, functionSymbol, maperiod,  atrperiod, emaMultiplier, "
-				+ "functionDaysDiff, doubleBack, correlation)" + " values (?,?,?,?,?,?,?,?,?,?)");
-
-		FileReader fr = new FileReader(DoubleBackKeltnerCorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
-
-		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("not set"))
-				continue;
-			if (in.contains("_")) {
-				String ins[] = in.split("_");
-				PreparedStatement stDelete = conn.prepareStatement("delete from keltner_correlation"
-						+ " where symbol = '" + ins[0] + "' and toCloseDays = " + ins[1]);
-				stDelete.execute();
-				continue;
-			}
-			String inColon[] = in.split(":");
-			String keyIn = inColon[2];
-			stInsert.setString(1, DoubleBackKeltnerCorrelation.getCloseSym(keyIn));
-			stInsert.setInt(2, DoubleBackKeltnerCorrelation.getPricefunctionDaysDiff(keyIn));
-			stInsert.setInt(3, Integer.parseInt(inColon[0]));
-			stInsert.setString(4, DoubleBackKeltnerCorrelation.getfunctionSymbol(keyIn));
-			stInsert.setInt(5, DoubleBackKeltnerCorrelation.getMAPeriod(keyIn));
-			stInsert.setInt(6, DoubleBackKeltnerCorrelation.getATRPeriod(keyIn));
-			stInsert.setDouble(7, DoubleBackKeltnerCorrelation.getEMAMultiplier(keyIn));
-			stInsert.setInt(8, DoubleBackKeltnerCorrelation.getKeltnerFunctionDaysDiff(keyIn));
-			stInsert.setInt(9, DoubleBackKeltnerCorrelation.getDoubleBack(keyIn));
-			stInsert.setDouble(10, DoubleBackKeltnerCorrelation.getCorr(keyIn));
-			stInsert.addBatch();
-		}
-		stInsert.executeBatch();
-		stInsert.close();
-		conn.commit();
-		conn.close();
-	}
-
 	public static void smimain(String[] args) throws Exception {
 		Connection conn = getDatabaseConnection.makeConnection();
 
@@ -183,6 +139,8 @@ public class BuildSQLTable {
 
 		conn.setAutoCommit(false);
 		while ((in = br.readLine()) != null) {
+			if (in.contains("set"))
+				continue;
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement(
@@ -232,6 +190,8 @@ public class BuildSQLTable {
 
 		conn.setAutoCommit(false);
 		while ((in = br.readLine()) != null) {
+			if (in.contains("set"))
+				continue;
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement("delete from macd_correlation" + " where symbol = '"
@@ -252,6 +212,48 @@ public class BuildSQLTable {
 			stInsert.setInt(8, DoubleBackMACDCorrelation.getMacdfunctionDaysDiff(keyIn));
 			stInsert.setInt(9, DoubleBackMACDCorrelation.getDoubleBack(keyIn));
 			stInsert.setDouble(10, DoubleBackMACDCorrelation.getCorr(keyIn));
+			stInsert.addBatch();
+		}
+		stInsert.executeBatch();
+		stInsert.close();
+		conn.commit();
+		conn.close();
+	}
+
+	public static void malinemain(String[] args) throws Exception {
+		Connection conn = getDatabaseConnection.makeConnection();
+
+		LogManager.getLogManager().reset();
+
+		final PreparedStatement stInsert = conn.prepareStatement("insert into maline_correlation"
+				+ "(symbol,   toCloseDays, significantPlace, functionSymbol, period, maType,   correlation)"
+				+ " values (?,?,?,?,?,?,?)");
+
+		FileReader fr = new FileReader(MALineCorrelation.tabFile);
+		BufferedReader br = new BufferedReader(fr);
+		String in = "";
+
+		conn.setAutoCommit(false);
+		while ((in = br.readLine()) != null) {
+			if (in.contains("set"))
+				continue;
+			if (in.contains("_")) {
+				String ins[] = in.split("_");
+				PreparedStatement stDelete = conn.prepareStatement("delete from maline_correlation"
+						+ " where symbol = '" + ins[0] + "' and toCloseDays = " + ins[1]);
+				stDelete.execute();
+				continue;
+			}
+			String inColon[] = in.split(":");
+			String keyIn = inColon[2];
+			stInsert.setString(1, MALineCorrelation.getCloseSym(keyIn));
+
+			stInsert.setInt(2, MALineCorrelation.getPricefunctionDaysDiff(keyIn));
+			stInsert.setInt(3, Integer.parseInt(inColon[0]));
+			stInsert.setString(4, MALineCorrelation.getfunctionSymbol(keyIn));
+			stInsert.setInt(5, MALineCorrelation.getMAPeriod(keyIn));
+			stInsert.setString(6, MALineCorrelation.getMaType(keyIn));
+			stInsert.setDouble(7, MALineCorrelation.getCorr(keyIn));
 			stInsert.addBatch();
 		}
 		stInsert.executeBatch();
@@ -345,133 +347,6 @@ public class BuildSQLTable {
 		conn.close();
 	}
 
-	public static void atrmain(String[] args) throws Exception {
-		Connection conn = getDatabaseConnection.makeConnection();
-
-		LogManager.getLogManager().reset();
-
-		final PreparedStatement stInsert = conn.prepareStatement("insert into atr_correlation"
-				+ "(symbol, toCloseDays, significantPlace, functionSymbol, period, functionDaysDiff,doubleBack, correlation)"
-				+ " values (?,?,?,?,?,?,?,?)");
-
-		FileReader fr = new FileReader(DoubleBackATRCorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
-
-		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("_")) {
-				String ins[] = in.split("_");
-				PreparedStatement stDelete = conn.prepareStatement(
-						"delete from ATR_correlation" + " where symbol = '" + ins[0] + "' and toCloseDays = " + ins[1]);
-				stDelete.execute();
-				continue;
-			}
-			String inColon[] = in.split(":");
-			String keyIn = inColon[2];
-			stInsert.setString(1, DoubleBackATRCorrelation.getCloseSym(keyIn));
-
-			stInsert.setInt(2, DoubleBackATRCorrelation.getPricefunctionDaysDiff(keyIn));
-			stInsert.setInt(3, Integer.parseInt(inColon[0]));
-			stInsert.setString(4, DoubleBackATRCorrelation.getfunctionSymbol(keyIn));
-			stInsert.setInt(5, DoubleBackATRCorrelation.getPeriod(keyIn));
-			stInsert.setInt(6, DoubleBackATRCorrelation.getATRfunctionDaysDiff(keyIn));
-			stInsert.setInt(7, DoubleBackATRCorrelation.getDoubleBack(keyIn));
-			stInsert.setDouble(8, DoubleBackATRCorrelation.getCorr(keyIn));
-			stInsert.addBatch();
-		}
-		stInsert.executeBatch();
-		stInsert.close();
-		conn.commit();
-		conn.close();
-	}
-
-	public static void ccimain(String[] args) throws Exception {
-		Connection conn = getDatabaseConnection.makeConnection();
-
-		LogManager.getLogManager().reset();
-
-		final PreparedStatement stInsert = conn.prepareStatement("insert into cci_correlation"
-				+ "(symbol, toCloseDays, significantPlace, functionSymbol, period, functionDaysDiff,doubleBack, correlation)"
-				+ " values (?,?,?,?,?,?,?,?)");
-
-		FileReader fr = new FileReader(DoubleBackCCICorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
-
-		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("not set"))
-				continue;
-			if (in.contains("_")) {
-				String ins[] = in.split("_");
-				PreparedStatement stDelete = conn.prepareStatement(
-						"delete from cci_correlation" + " where symbol = '" + ins[0] + "' and toCloseDays = " + ins[1]);
-				stDelete.execute();
-				continue;
-			}
-			String inColon[] = in.split(":");
-			String keyIn = inColon[2];
-			stInsert.setString(1, DoubleBackCCICorrelation.getCloseSym(keyIn));
-
-			stInsert.setInt(2, DoubleBackCCICorrelation.getfunctionDaysDiff(keyIn));
-			stInsert.setInt(3, Integer.parseInt(inColon[0]));
-			stInsert.setString(4, DoubleBackCCICorrelation.getfunctionSymbol(keyIn));
-			stInsert.setInt(5, DoubleBackCCICorrelation.getPeriod(keyIn));
-			stInsert.setInt(6, DoubleBackCCICorrelation.getCCIDaysBack(keyIn));
-			stInsert.setInt(7, DoubleBackCCICorrelation.getDoubleBack(keyIn));
-			stInsert.setDouble(8, DoubleBackCCICorrelation.getCorr(keyIn));
-			stInsert.addBatch();
-		}
-		stInsert.executeBatch();
-		stInsert.close();
-		conn.commit();
-		conn.close();
-	}
-
-	public static void natrmain(String[] args) throws Exception {
-		Connection conn = getDatabaseConnection.makeConnection();
-
-		LogManager.getLogManager().reset();
-
-		final PreparedStatement stInsert = conn.prepareStatement("insert into natr_correlation"
-				+ "(symbol, toCloseDays, significantPlace, functionSymbol, natrPeriod,  functionDaysDiff, doubleBack, correlation)"
-				+ " values (?,?,?,?,?,?,?,?)");
-
-		FileReader fr = new FileReader(DoubleBackNATRCorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
-
-		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("_")) {
-				String ins[] = in.split("_");
-				PreparedStatement stDelete = conn.prepareStatement("delete from natr_correlation" + " where symbol = '"
-						+ ins[0] + "' and toCloseDays = " + ins[1]);
-				stDelete.execute();
-				continue;
-			}
-			String inColon[] = in.split(":");
-			if (in.contains("not set"))
-				continue;
-			String keyIn = inColon[2];
-			stInsert.setString(1, DoubleBackNATRCorrelation.getCloseSym(keyIn));
-
-			stInsert.setInt(2, DoubleBackNATRCorrelation.getPricefunctionDaysDiff(keyIn));
-			stInsert.setInt(3, Integer.parseInt(inColon[0]));
-			stInsert.setString(4, DoubleBackNATRCorrelation.getfunctionSymbol(keyIn));
-			stInsert.setInt(5, DoubleBackNATRCorrelation.getNATRPeriod(keyIn));
-			stInsert.setInt(6, DoubleBackNATRCorrelation.getNATRDaysBack(keyIn));
-			stInsert.setInt(7, DoubleBackNATRCorrelation.getDoubleBack(keyIn));
-			stInsert.setDouble(8, DoubleBackNATRCorrelation.getCorr(keyIn));
-			stInsert.addBatch();
-		}
-		stInsert.executeBatch();
-		stInsert.close();
-		conn.commit();
-		conn.close();
-	}
-
 	public static void tsfmain(String[] args) throws Exception {
 		Connection conn = getDatabaseConnection.makeConnection();
 
@@ -487,7 +362,11 @@ public class BuildSQLTable {
 
 		conn.setAutoCommit(false);
 		while ((in = br.readLine()) != null) {
+			if (in.contains("set"))
+				continue;
+
 			if (in.contains("_")) {
+
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement(
 						"delete from tsf_correlation" + " where symbol = '" + ins[0] + "' and toCloseDays = " + ins[1]);

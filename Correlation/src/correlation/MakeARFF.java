@@ -32,7 +32,7 @@ public class MakeARFF {
 		CorrelationEstimator ce = new TSFCorrelationEstimator(conn);
 		DeltaBands pb = new DeltaBands(CorrelationEstimator.gsds.get(sym).inClose, daysOut);
 		TreeMap<String, Double> theBadness = new TreeMap<>();
-		ce.setWork(sym, daysOut, null, pb, null, theBadness);
+		ce.setWork(sym, daysOut, pb, null, theBadness);
 		String instances = ce.buildInstances();
 		FileWriter fw = new FileWriter("c:/users/joe/correlationARFF/" + ce.function + sym + daysOut + ".arff");
 		fw.write(instances.toCharArray(), 0, instances.toCharArray().length);

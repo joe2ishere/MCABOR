@@ -14,6 +14,8 @@ import java.util.concurrent.BlockingQueue;
 
 import correlation.DMIMakeARFFfromSQL;
 import correlation.MACDMakeARFFfromSQL;
+import correlation.MALinesMakeARFFfromSQL;
+import correlation.SMMakeARFFfromSQL;
 import correlation.TSFMakeARFFfromSQL;
 import util.getDatabaseConnection;
 import weka.classifiers.Classifier;
@@ -33,7 +35,7 @@ public class TheyreAllBad implements Runnable {
 		PreparedStatement ps = conn.prepareStatement("select distinct symbol" + " from dmi_correlation ");
 		ResultSet rs = ps.executeQuery();
 
-		int threadCount = 5;
+		int threadCount = 4;
 		BlockingQueue<NameQueue> Que = new ArrayBlockingQueue<NameQueue>(threadCount);
 		ArrayList<Thread> threadList = new ArrayList<>();
 		TheyreAllBad tab = new TheyreAllBad(Que);
@@ -111,11 +113,10 @@ public class TheyreAllBad implements Runnable {
 		PrintWriter pw = new PrintWriter(sw);
 		pw.println("% 1. Title: " + sym + "_" + dos + "_allbad_correlation");
 		pw.println("@RELATION " + sym + "_" + dos);
-//		pw.println("@ATTRIBUTE macd {0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0}");
-//		pw.println("@ATTRIBUTE tsf {0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0}");
-//		pw.println("@ATTRIBUTE class {0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0}");
 		pw.println("@ATTRIBUTE dmi NUMERIC");
 		pw.println("@ATTRIBUTE macd NUMERIC");
+		pw.println("@ATTRIBUTE mali NUMERIC");
+		pw.println("@ATTRIBUTE smi NUMERIC");
 		pw.println("@ATTRIBUTE tsf NUMERIC");
 		pw.println("@ATTRIBUTE class NUMERIC");
 
@@ -133,6 +134,18 @@ public class TheyreAllBad implements Runnable {
 		int macdClassPos = macdArff.getData().numAttributes() - 1;
 		macdArff.getData().setClassIndex(macdClassPos);
 
+		MALinesMakeARFFfromSQL mali = new MALinesMakeARFFfromSQL(true);
+		mali.makeARFFFromSQL(sym, dos);
+		ArffReader maliArff = new ArffReader(new FileReader(mali.getFilename(sym, dos)));
+		int maliClassPos = maliArff.getData().numAttributes() - 1;
+		maliArff.getData().setClassIndex(maliClassPos);
+
+		SMMakeARFFfromSQL sm = new SMMakeARFFfromSQL(true);
+		sm.makeARFFFromSQL(sym, dos);
+		ArffReader smArff = new ArffReader(new FileReader(sm.getFilename(sym, dos)));
+		int smClassPos = smArff.getData().numAttributes() - 1;
+		smArff.getData().setClassIndex(smClassPos);
+
 		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(true);
 		tsf.makeARFFFromSQL(sym, dos);
 		ArffReader tsfArff = new ArffReader(new FileReader(tsf.getFilename(sym, dos)));
@@ -140,25 +153,50 @@ public class TheyreAllBad implements Runnable {
 		tsfArff.getData().setClassIndex(tsfClassPos);
 
 		for (String dt : dmi.dateAttribute.keySet()) {
+
 			Integer dmiPos = dmi.dateAttribute.get(dt);
 			if (dmiPos == null)
 				continue;
+
 			Integer macdPos = macd.dateAttribute.get(dt);
 			if (macdPos == null)
 				continue;
+
+			Integer maliPos = mali.dateAttribute.get(dt);
+			if (maliPos == null)
+				continue;
+
+			Integer smPos = sm.dateAttribute.get(dt);
+			if (smPos == null)
+				continue;
+
 			Integer tsfPos = tsf.dateAttribute.get(dt);
 			if (tsfPos == null)
 				continue;
+
 			Instance dmiInst = dmiArff.getData().get(dmiPos.intValue());
 			double dmiClassValue = dmiInst.classValue();
+
 			Instance macdInst = macdArff.getData().get(macdPos.intValue());
 			double macdClassValue = macdInst.classValue();
+
+			Instance maliInst = maliArff.getData().get(maliPos.intValue());
+			double maliClassValue = maliInst.classValue();
+
+			Instance smInst = smArff.getData().get(smPos.intValue());
+			double smClassValue = smInst.classValue();
+
 			Instance tsfInst = tsfArff.getData().get(tsfPos.intValue());
 			double tsfClassValue = tsfInst.classValue();
-			if (dmiClassValue != macdClassValue | dmiClassValue != tsfClassValue)
+
+//			 
+			if (dmiClassValue != macdClassValue | dmiClassValue != maliClassValue | dmiClassValue != smClassValue
+					| dmiClassValue != tsfClassValue)
 				System.out.println("logic error");
 			pw.print(doInstance(dmiArff.getData(), dmiInst) + ",");
 			pw.print(doInstance(macdArff.getData(), macdInst) + ",");
+			pw.print(doInstance(maliArff.getData(), maliInst) + ",");
+			pw.print(doInstance(smArff.getData(), smInst) + ",");
 			pw.print(doInstance(tsfArff.getData(), tsfInst) + ",");
 			pw.println(dmiClassValue);
 			pw.flush();

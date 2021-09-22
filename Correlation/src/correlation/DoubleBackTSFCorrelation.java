@@ -7,11 +7,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -24,16 +21,6 @@ import util.getDatabaseConnection;
 import utils.TopAndBottomList;
 
 public class DoubleBackTSFCorrelation implements Runnable {
-
-	static TreeMap<String, Integer> symList = new TreeMap<>();
-
-	static TreeMap<String, GetETFDataUsingSQL> gsds = new TreeMap<>();
-
-	double bestCorrelation = 0;
-
-	static ArrayList<String> doneList = new ArrayList<>();
-
-	TreeMap<String, TopAndBottomList> tops = new TreeMap<>();
 
 	static public class Queue {
 		String sym;
@@ -48,61 +35,15 @@ public class DoubleBackTSFCorrelation implements Runnable {
 
 	}
 
-	static TreeMap<String, Integer> alreadyDoneCount = new TreeMap<>();
-
-	static ArrayList<String> updateSymbol = CorrelationUpdateAllOrSome.getUpdateSymbolList();;
-
 	public static void main(String[] args) throws Exception {
 
-		System.out.println(updateSymbol == null ? "Updating all symbols" : "partial update");
 		Connection conn = getDatabaseConnection.makeConnection();
 
-		PreparedStatement psLastDate = conn
-				.prepareStatement("select distinct txn_date from etfprices order by txn_date desc limit 1");
-		ResultSet rsLastDate = psLastDate.executeQuery();
-		if (rsLastDate.next() == false) {
-			System.out.println("end of date error");
-			System.exit(0);
-		}
-		String latestDate = rsLastDate.getString(1);
-		PreparedStatement ps = conn.prepareStatement(
-				"select symbol, AVG(volume) AS vavg, count(*) as txncnt  from etfprices  GROUP BY symbol ORDER BY symbol");
-		ResultSet rs = ps.executeQuery();
-
-		while (rs.next()) {
-
-			String sym = rs.getString(1).toLowerCase();
-			double vol = rs.getDouble(2);
-			int cnt = rs.getInt(3);
-
-			if (vol < 10000) {
-				System.out.println("skipping " + sym + " with vol of " + vol);
-				continue;
-			}
-
-			if (cnt < 2000) {
-				System.out.println("skipping " + sym + " with cnt of " + cnt);
-				continue;
-
-			}
-
-			GetETFDataUsingSQL pgsd = GetETFDataUsingSQL.getInstance(sym);
-			if (pgsd.inDate[pgsd.inDate.length - 1].compareTo(latestDate) != 0) {
-				System.out.println("skipping " + sym + " with end date of  " + pgsd.inDate[pgsd.inDate.length - 1]);
-				continue;
-
-			}
-
-			gsds.put(sym, pgsd);
-			symList.put(sym, cnt);
-
-		}
-
-		// System.exit(0);
+		CorrelationUpdate cu = new CorrelationUpdate(conn);
 
 		int threadCount = 4;
 		BlockingQueue<Queue> TSFQue = new ArrayBlockingQueue<Queue>(threadCount);
-		DoubleBackTSFCorrelation corrs = new DoubleBackTSFCorrelation(TSFQue);
+		DoubleBackTSFCorrelation corrs = new DoubleBackTSFCorrelation(TSFQue, cu);
 		corrs.loadTables();
 
 		for (int i = 0; i < threadCount; i++) {
@@ -110,12 +51,12 @@ public class DoubleBackTSFCorrelation implements Runnable {
 			thrswu.start();
 		}
 		Core core = new Core();
-		for (String TSFSym : symList.keySet()) {
+		for (String TSFSym : cu.symList.keySet()) {
 
-			if (doneList.contains(TSFSym))
+			if (cu.doneList.contains(TSFSym))
 				continue;
-			GetETFDataUsingSQL gsdTSF = gsds.get(TSFSym);
-			if (symList.get(TSFSym) < 2000)
+			GetETFDataUsingSQL gsdTSF = cu.gsds.get(TSFSym);
+			if (cu.symList.get(TSFSym) < cu.entryLimit)
 				continue;
 			System.out.println("running " + TSFSym);
 			for (int tsfPeriod = 2; tsfPeriod <= 12; tsfPeriod += 1) {
@@ -155,9 +96,11 @@ public class DoubleBackTSFCorrelation implements Runnable {
 	}
 
 	BlockingQueue<Queue> queuedGSD;
+	CorrelationUpdate cu;
 
-	public DoubleBackTSFCorrelation(BlockingQueue<Queue> TSFQue) {
+	public DoubleBackTSFCorrelation(BlockingQueue<Queue> TSFQue, CorrelationUpdate cu) {
 		this.queuedGSD = TSFQue;
+		this.cu = cu;
 
 	}
 
@@ -173,9 +116,9 @@ public class DoubleBackTSFCorrelation implements Runnable {
 			FileReader fr = new FileReader(doneFile);
 			BufferedReader br = new BufferedReader(fr);
 			String in = "";
-			if (updateSymbol == null) {
+			if (cu.updateSymbol == null) {
 				while ((in = br.readLine()) != null)
-					doneList.add(in.trim());
+					cu.doneList.add(in.trim());
 			}
 			fr.close();
 			fr = new FileReader(tabFile);
@@ -183,10 +126,10 @@ public class DoubleBackTSFCorrelation implements Runnable {
 			in = "";
 			while ((in = br.readLine()) != null) {
 
-				TopAndBottomList tab = tops.get(in);
+				TopAndBottomList tab = cu.tops.get(in);
 				if (tab == null) {
 					tab = new TopAndBottomList(10);
-					tops.put(in, tab);
+					cu.tops.put(in, tab);
 				}
 				for (int i = 0; i < tab.size; i++) {
 					in = br.readLine();
@@ -239,11 +182,11 @@ public class DoubleBackTSFCorrelation implements Runnable {
 		}
 		PrintWriter pw = new PrintWriter(fw);
 
-		synchronized (tops) {
+		synchronized (cu.tops) {
 
-			for (String key : tops.keySet()) {
+			for (String key : cu.tops.keySet()) {
 				pw.println(key);
-				TopAndBottomList tab = tops.get(key);
+				TopAndBottomList tab = cu.tops.get(key);
 				synchronized (tab) {
 					for (int i = 0; i < tab.size; i++) {
 						pw.println(i + ":" + tab.getTopValue(i) + ":" + tab.getTopDescription()[i]);
@@ -268,11 +211,11 @@ public class DoubleBackTSFCorrelation implements Runnable {
 				if (qSymbol.compareTo("<<<STOP>>>") == 0)
 					return;
 
-				for (String closingSymbol : symList.keySet()) {
-					if (updateSymbol != null)
-						if (updateSymbol.contains(closingSymbol) == false)
+				for (String closingSymbol : cu.symList.keySet()) {
+					if (cu.updateSymbol != null)
+						if (cu.updateSymbol.contains(closingSymbol) == false)
 							continue;
-					GetETFDataUsingSQL closingGSD = gsds.get(closingSymbol);
+					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
 
 					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= 30; pricefunctionDaysDiff += 1) {
 
@@ -330,40 +273,39 @@ public class DoubleBackTSFCorrelation implements Runnable {
 										continue;
 									double abscorr = Math.abs(corr);
 									String key = closingSymbol + "_" + pricefunctionDaysDiff;
-									synchronized (tops) {
-										TopAndBottomList tabBest = tops.get(key);
+									synchronized (cu.tops) {
+										TopAndBottomList tabBest = cu.tops.get(key);
 										if (tabBest == null) {
 											tabBest = new TopAndBottomList(10);
-											tops.put(key, tabBest);
+											cu.tops.put(key, tabBest);
 										}
 										for (int i = 0; i < 5; i++)
 											if ((tabBest.getTopDescription()[i].contains(";" + qSymbol)
 													& tabBest.getTopValue(i) >= abscorr)) {
 												continue nextDD;
 											}
-										//int setAt = 
-										tabBest.setTop(abscorr,
+										int setAt = tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.TSFPeriod,
 														TSFfunctionDaysDiff, doubleBack, corr));
-//										if (setAt != -1) {
-//											if (setAt > 0) {
-//												for (int i = 0; i < setAt; i++) {
-//													if (tabBest.getTopDescription()[i].contains(";" + qSymbol))
-//														tabBest.removeFromTop(setAt);
-//
-//												}
-//											}
-//											for (int i = setAt + 1; i < tabBest.size; i++) {
-//												if (tabBest.getTopDescription()[i].contains(";" + qSymbol))
-//													tabBest.removeFromTop(i);
-//											}
-//										}
+										if (setAt != -1) {
+											if (setAt > 0) {
+												for (int i = 0; i < setAt; i++) {
+													if (tabBest.getTopDescription()[i].contains(";" + qSymbol))
+														tabBest.removeFromTop(setAt);
+
+												}
+											}
+											for (int i = setAt + 1; i < tabBest.size; i++) {
+												if (tabBest.getTopDescription()[i].contains(";" + qSymbol))
+													tabBest.removeFromTop(i);
+											}
+										}
+										if (abscorr > cu.bestCorrelation) {
+											System.out.println("best correlation " + Math.abs(corr));
+											cu.bestCorrelation = abscorr;
+										}
 									}
 
-									if (abscorr > bestCorrelation) {
-										System.out.println("best correlation " + Math.abs(corr));
-										bestCorrelation = abscorr;
-									}
 								}
 							}
 						}

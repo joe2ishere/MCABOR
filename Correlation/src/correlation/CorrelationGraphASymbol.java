@@ -96,8 +96,6 @@ public class CorrelationGraphASymbol {
 
 		System.out.println(sym);
 
-		Averager avg = new Averager();
-
 		TreeMap<Integer, Averager> adxaverageForDaysOut = new TreeMap<>();
 		TreeMap<Integer, Averager> atraverageForDaysOut = new TreeMap<>();
 //		TreeMap<Integer, Averager> bbaverageForDaysOut = new TreeMap<>();
@@ -125,7 +123,7 @@ public class CorrelationGraphASymbol {
 				try {
 					adxaverageForDaysOut.put(daysOut, new Averager());
 					ADXCorrelationEstimator adx = new ADXCorrelationEstimator(conn);
-					adx.setWork(sym, daysOut, avg, priceBands, adxaverageForDaysOut, theBadness);
+					adx.setWork(sym, daysOut, priceBands, adxaverageForDaysOut, theBadness);
 					adx.run();
 					double got = adxaverageForDaysOut.get(daysOut).get();
 					doAverages(adxAverages, got, daysOut, priceBands);
@@ -134,19 +132,7 @@ public class CorrelationGraphASymbol {
 					return;
 				}
 			}));
-			threads.add(new Thread(() -> {
-				try {
-					atraverageForDaysOut.put(daysOut, new Averager());
-					ATRCorrelationEstimator atr = new ATRCorrelationEstimator(conn);
-					atr.setWork(sym, daysOut, avg, priceBands, atraverageForDaysOut, theBadness);
-					atr.run();
-					double got = atraverageForDaysOut.get(daysOut).get();
-					doAverages(atrAverages, got, daysOut, priceBands);
-				} catch (Exception e1) {
-					e1.printStackTrace();
-					return;
-				}
-			}));
+
 //			threads.add(new Thread(() -> {
 //				try {
 //					bbaverageForDaysOut.put(daysOut, new Averager());
@@ -164,7 +150,7 @@ public class CorrelationGraphASymbol {
 				try {
 					dmiaverageForDaysOut.put(daysOut, new Averager());
 					DMICorrelationEstimator dmi = new DMICorrelationEstimator(conn);
-					dmi.setWork(sym, daysOut, avg, priceBands, dmiaverageForDaysOut, theBadness);
+					dmi.setWork(sym, daysOut, priceBands, dmiaverageForDaysOut, theBadness);
 					dmi.run();
 					double got = dmiaverageForDaysOut.get(daysOut).get();
 					doAverages(dmiAverages, got, daysOut, priceBands);
@@ -179,7 +165,7 @@ public class CorrelationGraphASymbol {
 					macdaverageForDaysOut.put(daysOut, new Averager());
 					MACDCorrelationEstimator macd;
 					macd = new MACDCorrelationEstimator(conn);
-					macd.setWork(sym, daysOut, avg, priceBands, macdaverageForDaysOut, theBadness);
+					macd.setWork(sym, daysOut, priceBands, macdaverageForDaysOut, theBadness);
 					macd.run();
 					double got = macdaverageForDaysOut.get(daysOut).get();
 					doAverages(macdAverages, got, daysOut, priceBands);
@@ -193,7 +179,7 @@ public class CorrelationGraphASymbol {
 				try {
 					tsfaverageForDaysOut.put(daysOut, new Averager());
 					TSFCorrelationEstimator tsf = new TSFCorrelationEstimator(conn);
-					tsf.setWork(sym, daysOut, avg, priceBands, tsfaverageForDaysOut, theBadness);
+					tsf.setWork(sym, daysOut, priceBands, tsfaverageForDaysOut, theBadness);
 					tsf.run();
 					double got = tsfaverageForDaysOut.get(daysOut).get();
 					doAverages(tsfAverages, got, daysOut, priceBands);

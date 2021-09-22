@@ -148,12 +148,10 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 		// TODO set estimators
 
 		estimators.add(new ADXCorrelationEstimator(conn));
-		estimators.add(new ATRCorrelationEstimator(conn));
 //		estimators.add(new BBCorrelationEstimator(conn));
 		estimators.add(new DMICorrelationEstimator(conn));
 		estimators.add(new MACDCorrelationEstimator(conn));
 		estimators.add(new TSFCorrelationEstimator(conn));
-		estimators.add(new CCICorrelationEstimator(conn));
 
 		debugging = true;
 		ArrayList<String> categoryDoneforDebugging = new ArrayList<>();
@@ -182,7 +180,6 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 			}
 			System.out.print(sym);
 
-			Averager avverage = new Averager();
 			TreeMap<Integer, Averager> avgForDaysOut = new TreeMap<>();
 
 			TreeMap<Integer, Averager> catAvg = null;
@@ -200,7 +197,7 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 
 				ArrayList<Thread> threads = new ArrayList<>();
 				for (CorrelationEstimator ce : estimators) {
-					ce.setWork(sym, daysOut, avverage, priceBands, avgForDaysOut, theBadness);
+					ce.setWork(sym, daysOut, priceBands, avgForDaysOut, theBadness);
 					Thread th = new Thread(ce);
 					threads.add(th);
 					th.start();
@@ -308,7 +305,7 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 				}
 			}
 
-			System.out.println(";" + df.format(avverage.get()/* + ";" + overAllAverageStrength.get() */));
+			System.out.println(";" + df.format(0/* + ";" + overAllAverageStrength.get() */));
 
 		}
 
@@ -325,7 +322,6 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 		doubleBacks = new TreeMap<>();
 		dates = new TreeMap<>();
 
-		this.averager = average;
 		this.priceBands = priceBands;
 
 		this.avgForDaysOut = smiaverageForDaysOut;
@@ -492,14 +488,6 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 				}
 				// System.out.println("\n"+this.getClass().getSimpleName() + ";" + got);
 				thisDaysAverage.add(got);
-				double funcAvg = .5;
-				ArrayList<Averager> funcAverages = functionDayAverager.get(this.function);
-				if (funcAverages != null) {
-					Averager funcDayAverage = funcAverages.get(daysOut);
-					if (funcDayAverage != null)
-						funcAvg = funcDayAverage.get();
-				}
-				averager.add(got, funcAvg);
 
 			}
 

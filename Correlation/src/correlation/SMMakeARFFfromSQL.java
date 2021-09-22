@@ -21,6 +21,12 @@ import util.getDatabaseConnection;
 
 public class SMMakeARFFfromSQL {
 
+	boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
+
+	public SMMakeARFFfromSQL(boolean b) {
+		withAttributePosition = b;
+	}
+
 	public static void main(String[] args) throws Exception {
 
 		LogManager.getLogManager().reset();
@@ -50,11 +56,11 @@ public class SMMakeARFFfromSQL {
 			break;
 		}
 		sin.close();
-		SMMakeARFFfromSQL sm = new SMMakeARFFfromSQL();
+		SMMakeARFFfromSQL sm = new SMMakeARFFfromSQL(false);
 		sm.makeARFFFromSQL(sym, dos);
 	}
 
-	public String getFilename(String sym, int daysOut) {
+	public String getFilename(String sym, String daysOut) {
 		return "c:/users/joe/correlationARFF/" + sym + "_" + daysOut + "_smi_correlation.arff";
 	}
 
@@ -62,7 +68,6 @@ public class SMMakeARFFfromSQL {
 
 	public void makeARFFFromSQL(String sym, String dos) throws Exception {
 
-		boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
 		Connection conn = null;
 
 		conn = getDatabaseConnection.makeConnection();
@@ -87,8 +92,7 @@ public class SMMakeARFFfromSQL {
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
 
-		 
-		PrintWriter pw = new PrintWriter(getFilename(sym, daysOut));
+		PrintWriter pw = new PrintWriter(getFilename(sym, dos));
 		pw.println("% 1. Title: " + sym + "_smi_correlation");
 		pw.println("@RELATION " + sym + "_" + dos);
 
@@ -96,14 +100,11 @@ public class SMMakeARFFfromSQL {
 
 			String functionSymbol = rs.getString("functionSymbol");
 
-			double absCorr = Math.abs(rs.getDouble("correlation"));
-
 			GetETFDataUsingSQL pgsd = GetETFDataUsingSQL.getInstance(functionSymbol);
 
 			if (startDate.compareTo(pgsd.inDate[50]) < 0)
 				startDate = pgsd.inDate[50];
 
-			System.out.println("using " + functionSymbol);
 			int hiLowPeriod = rs.getInt("hiLowPeriod");
 			int maPeriod = rs.getInt("maPeriod");
 			int smSmoothPeriod = rs.getInt("smSmoothPeriod");
@@ -115,9 +116,8 @@ public class SMMakeARFFfromSQL {
 			doubleBacks.put(symKey, rs.getInt("doubleBack"));
 			smfunctionDaysDiff.put(symKey, rs.getInt("functionDaysDiff"));
 			pw.println("@ATTRIBUTE " + symKey + "smi NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "smiRF {'R','F'}");
 			pw.println("@ATTRIBUTE " + symKey + "signal NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "signalRF {'R','F'}");
+
 			smDates.put(symKey, pgsd.inDate);
 
 		}
@@ -133,7 +133,7 @@ public class SMMakeARFFfromSQL {
 		int pos = 50;
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
-
+		int attributePos = -1;
 		eemindexLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut;) {
 			String posDate = gsd.inDate[iday];
 			pos = 0;
@@ -191,6 +191,7 @@ public class SMMakeARFFfromSQL {
 //					bavg, savg);
 			printAttributeData(iday, daysOut, pw, smis, smfunctionDaysDiff, doubleBacks, arraypos, gsd.inClose, db,
 					withAttributePosition);
+			dateAttribute.put(gsd.inDate[iday], ++attributePos);
 			iday++;
 			for (pos = 0; pos < arraypos.length; pos++) {
 				arraypos[pos]++;
@@ -202,17 +203,14 @@ public class SMMakeARFFfromSQL {
 
 	}
 
-	static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-	public static String getAttributeText(StochasticMomentum sm, int smfunctionDaysDiff, int smstart, int doubleBack) {
-		return (sm.SMI[smstart] + ","
-				+ (sm.SMI[smstart] > sm.SMI[smstart - smfunctionDaysDiff - doubleBack] ? "R" : "F") + ","
-				+ sm.Signal[smstart] + ","
-				+ (sm.Signal[smstart] > sm.Signal[smstart - smfunctionDaysDiff - doubleBack] ? "R" : "F") + ",");
+	public String getAttributeText(StochasticMomentum sm, int smfunctionDaysDiff, int smstart, int doubleBack) {
+		return (sm.SMI[smstart] + "," + sm.Signal[smstart] + ",");
 
 	}
 
-	public static void printAttributeData(int iday, int daysOut, PrintWriter pw, TreeMap<String, Object> myParms,
+	public void printAttributeData(int iday, int daysOut, PrintWriter pw, TreeMap<String, Object> myParms,
 			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
 			double[] closes, DeltaBands priceBands, boolean withAttributePosition) {
 
@@ -223,13 +221,13 @@ public class SMMakeARFFfromSQL {
 			int smstart = arraypos[pos];
 			// System.out.print(smDates.get(key)[smstart] + ";");
 			pw.print(getAttributeText(sm, smfunctionDaysDiff, smstart, 0));
-
+			pos++;
 		}
 		if (withAttributePosition)
 			pw.println(priceBands.getAttributePosition(iday, daysOut, closes));
 		else
 			pw.println(priceBands.getAttributeValue(iday, daysOut, closes));
-		pos++;
+
 		pw.flush();
 
 	}
