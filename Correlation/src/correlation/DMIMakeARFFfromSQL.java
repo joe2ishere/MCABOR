@@ -1,5 +1,6 @@
 package correlation;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -66,7 +67,7 @@ public class DMIMakeARFFfromSQL {
 
 	public TreeMap<String, Integer> dateAttribute = new TreeMap<>();
 
-	public void makeARFFFromSQL(String sym, String dos) throws Exception {
+	public File makeARFFFromSQL(String sym, String dos) throws Exception {
 
 		Core core = new Core();
 		Connection conn = null;
@@ -92,7 +93,8 @@ public class DMIMakeARFFfromSQL {
 		ResultSet rs = ps.executeQuery();
 
 		String in;
-		PrintWriter pw = new PrintWriter(getFilename(sym, dos));
+		File file = new File(getFilename(sym, dos));
+		PrintWriter pw = new PrintWriter(file);
 		pw.println("% 1. Title: " + sym + "_dmi_correlation");
 		pw.println("@RELATION " + sym + "_" + dos);
 
@@ -205,6 +207,7 @@ public class DMIMakeARFFfromSQL {
 		}
 
 		pw.close();
+		return file;
 	}
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");

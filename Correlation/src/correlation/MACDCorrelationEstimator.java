@@ -43,10 +43,6 @@ public class MACDCorrelationEstimator extends CorrelationEstimator {
 
 		IBk classifier = new IBk();
 		thisClassifier = classifier;
-		String options[] = { "-K", "44", "-X", "-I" };
-//		String options[] = { "-K", "2", "-X", "-I" };
-//		classifier.setOptions(options);
-//		classifier.setMeanSquared(true);
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
 	}

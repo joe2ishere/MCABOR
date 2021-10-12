@@ -41,17 +41,11 @@ public class TSFCorrelationEstimator extends CorrelationEstimator {
 	@Override
 	public double drun(Instances instances) throws Exception {
 
-//		IBk classifier = new IBk();
-//		String options[] = { "-K", "2", "-X", "-I" };
-//		classifier.setOptions(options);
-//		classifier.setMeanSquared(true);
 		RandomForest classifier = new RandomForest();
 		thisClassifier = classifier;
-		classifier.setOptions(
-				new String[] { "-K", "0", "-M", "2.0", "-V", "0.001", "-S", "1", "-do-not-check-capabilities" });
 		classifier.buildClassifier(instances);
-
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
+
 	}
 
 	@Override

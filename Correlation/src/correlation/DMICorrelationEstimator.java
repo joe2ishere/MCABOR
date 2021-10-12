@@ -47,7 +47,7 @@ public class DMICorrelationEstimator extends CorrelationEstimator {
 		 * classifier.setMeanSquared(true); classifier.buildClassifier(instances);
 		 * 
 		 */
-		classifier.setOptions(new String[] { "-K", "19", "-I", "-E", "-X" });
+		classifier.setOptions(new String[] { "-K", "2" });
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
 

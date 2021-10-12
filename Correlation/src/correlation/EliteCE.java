@@ -51,7 +51,7 @@ public class EliteCE extends CorrelationEstimator {
 		// estimators.add(new BBCorrelationEstimator(conn));
 		estimators.add(new DMICorrelationEstimator(conn));
 		estimators.add(new MACDCorrelationEstimator(conn));
-		// estimators.add(new SMICorrelationEstimator(conn));
+		estimators.add(new MALinesCorrelationEstimator(conn));
 		estimators.add(new TSFCorrelationEstimator(conn));
 
 		PreparedStatement selectSymbols = conn

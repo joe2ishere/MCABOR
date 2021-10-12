@@ -34,7 +34,7 @@ public class MakeMFBuySellReportUsingTSF {
 
 		PreparedStatement psMFGet = conn
 				.prepareStatement("select dt, close from fidelitymutualfunds where name = ? order by dt");
-		FileReader tsfFR = new FileReader("tsfCorrelationTSFOverSignal_30days_MutualFunds.csv");
+		FileReader tsfFR = new FileReader("tsfCorrelationOverSignal_30days_MutualFunds.csv");
 		BufferedReader tsfBR = new BufferedReader(tsfFR);
 
 		String intsfLine = "";

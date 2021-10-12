@@ -280,8 +280,8 @@ public abstract class CorrelationEstimator implements Runnable {
 
 		estimators.add(new DMICorrelationEstimator(conn));
 		estimators.add(new MACDCorrelationEstimator(conn));
+		estimators.add(new MAAveragerCorrelationEstimator(conn));
 		estimators.add(new MALinesCorrelationEstimator(conn));
-		estimators.add(new SMICorrelationEstimator(conn));
 		estimators.add(new TSFCorrelationEstimator(conn));
 
 		StringBuffer etfExpectations = new StringBuffer();
@@ -365,8 +365,8 @@ public abstract class CorrelationEstimator implements Runnable {
 				brBad.close();
 				sb.append(theBadness.get("dmi;" + daysOut) + ",");
 				sb.append(theBadness.get("macd;" + daysOut) + ",");
+				sb.append(theBadness.get("maAvg;" + daysOut) + ",");
 				sb.append(theBadness.get("mali;" + daysOut) + ",");
-				sb.append(theBadness.get("smi;" + daysOut) + ",");
 				sb.append(theBadness.get("tsf;" + daysOut) + ",");
 
 				sb.append("?");
@@ -376,6 +376,7 @@ public abstract class CorrelationEstimator implements Runnable {
 				LinearRegression classifier = new LinearRegression();
 				classifier.buildClassifier(instances);
 				double got = classifier.classifyInstance(instances.get(instances.size() - 1));
+				setResultsForDBForBadNess(got, sym, daysOut);
 				avgForDaysOut.get(daysOut).add(got, daysOut / 5);
 //				// daysOut / 5 is a weight that shows that
 //				// the lower dates are less effective and the higher dates are much more
@@ -1370,6 +1371,19 @@ public abstract class CorrelationEstimator implements Runnable {
 //	}
 
 	public abstract double drun(Instances instances) throws Exception;
+
+	public static void setResultsForDBForBadNess(double got, String sym, int daysOut) {
+		if (resultsForDBPrintWriter != null)
+			try {
+				resultsForDBPrintWriter.println(sym + ";Bad;" + currentMktDate + ";" + daysOut + ";" + got);
+
+			} catch (Exception e) {
+
+				e.printStackTrace();
+				System.exit(0);
+			}
+
+	}
 
 	public void setResultsForDB(double got) {
 		if (resultsForDBPrintWriter != null)

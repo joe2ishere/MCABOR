@@ -8,24 +8,26 @@ import java.util.TreeMap;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 import com.tictactec.ta.lib.Core;
-import com.tictactec.ta.lib.MInteger;
+import com.tictactec.ta.lib.MAType;
 
 import bands.DeltaBands;
-import util.Realign;
+import movingAvgAndLines.MovingAvgAndLineIntercept;
 import weka.classifiers.Classifier;
+import weka.classifiers.lazy.KStar;
 import weka.core.Instances;
 
-public class CCICorrelationEstimator extends CorrelationEstimator {
+public class MAAveragerCorrelationEstimator extends CorrelationEstimator {
 
 	Core core = new Core();
-	CCIMakeARFFfromSQL makeSQL = new CCIMakeARFFfromSQL();
+	MAAveragesMakeARFFfromSQL makeSQL = new MAAveragesMakeARFFfromSQL(false);
 
-	public CCICorrelationEstimator(Connection conn) throws SQLException {
+	public MAAveragerCorrelationEstimator(Connection conn) throws SQLException {
 		super(conn);
-		psSelect = conn.prepareStatement("select "
-				+ "symbol,  toCloseDays, significantPlace, functionSymbol, period, functionDaysDiff, doubleBack, correlation  from cci_correlation"
-				+ " where symbol = ? and toCloseDays = ?   order by symbol, toCloseDays, significantplace");
-		function = "cci";
+		psSelect = conn.prepareStatement(
+				"select " + "symbol,   toCloseDays, significantPlace, functionSymbol, period, matype, correlation"
+						+ "  from  maline_correlation"
+						+ " where symbol = ? and toCloseDays = ?  order by symbol, toCloseDays, significantplace");
+		function = "maAvg";
 	}
 
 	@Override
@@ -34,6 +36,7 @@ public class CCICorrelationEstimator extends CorrelationEstimator {
 		ResultSet rsSelect = psSelect.executeQuery();
 
 		myParms = new TreeMap<String, Object>();
+
 		nextFunctionSymbol: while (rsSelect.next()) {
 
 			String functionSymbol = rsSelect.getString("functionSymbol");
@@ -57,29 +60,28 @@ public class CCICorrelationEstimator extends CorrelationEstimator {
 				System.out.println("missing data for " + functionSymbol);
 				continue;
 			}
-
-			if (startDate.compareTo(pgsd.inDate[50]) < 0) {
+			if (startDate.compareTo(pgsd.inDate[50]) < 0)
 				startDate = pgsd.inDate[50];
-				// System.out.println(startDate + " " + functionSymbol);
-			}
 
 			int period = rsSelect.getInt("period");
+			String matype = rsSelect.getString("maType");
+			MAType maType = null;
+			for (MAType types : MAType.values()) {
+				if (types.name().compareTo(matype) == 0) {
+					maType = types;
+					break;
+				}
+			}
 
-			double cci[] = new double[pgsd.inClose.length];
-			MInteger outBegIdx = new MInteger();
-			MInteger outNBElement = new MInteger();
-
-			core.cci(0, pgsd.inClose.length - 1, pgsd.inHigh, pgsd.inLow, pgsd.inClose, period, outBegIdx, outNBElement,
-					cci);
-
-			Realign.realign(cci, outBegIdx.value);
+			MovingAvgAndLineIntercept mal = new MovingAvgAndLineIntercept(pgsd, period, maType, period, maType);
 			String symKey = function + "_" + functionSymbol + "_" + rsSelect.getInt("significantPlace");
+			MaLineParmToPass ptp = new MaLineParmToPass(mal, pgsd.inClose, processDate);
+			myParms.put(symKey, ptp);
+			functionDaysDiffMap.put(symKey, 0);
+			pw.println("@ATTRIBUTE " + symKey + "maAVG NUMERIC");
 
-			myParms.put(symKey, cci);
-			functionDaysDiffMap.put(symKey, rsSelect.getInt("functionDaysDiff"));
-			pw.println("@ATTRIBUTE " + symKey + "cci NUMERIC");
-			// pw.println("@ATTRIBUTE " + symKey + "cciback NUMERIC");
 			dates.put(symKey, pgsd.inDate);
+
 		}
 
 	}
@@ -88,16 +90,21 @@ public class CCICorrelationEstimator extends CorrelationEstimator {
 	public void printAttributeData(int iday, int daysOutCalc, PrintWriter pw,
 			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
 			double[] inClose, DeltaBands priceBands) {
+		try {
+			makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, arraypos, inClose, processDate, priceBands,
+					true);
+		} catch (Exception e) {
 
-		makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, functionDaysDiffMap, doubleBacks, arraypos, inClose,
-				priceBands, true);
+			e.printStackTrace();
+			System.exit(0);
+		}
 
 	}
 
 	@Override
 	protected void getAttributeText(PrintWriter pw, Object myParm, int functionDaysDiff, int start, int doubleBack) {
 
-		pw.print(makeSQL.getAttributeText((double[]) myParm, functionDaysDiff, start, doubleBack));
+		makeSQL.getAttributeText(pw, (MaLineParmToPass) myParm, functionDaysDiff);
 
 	}
 
@@ -109,8 +116,10 @@ public class CCICorrelationEstimator extends CorrelationEstimator {
 
 	@Override
 	public double drun(Instances instances) throws Exception {
-		// TODO Auto-generated method stub
-		return 0;
+		Classifier classifier = new KStar();
+		classifier.buildClassifier(instances);
+		return classifier.classifyInstance(instances.get(instances.size() - 1));
+
 	}
 
 }

@@ -14,6 +14,7 @@ import java.util.logging.LogManager;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 import com.americancoders.lineIntersect.Line;
+import com.americancoders.lineIntersect.Point;
 import com.tictactec.ta.lib.MAType;
 
 import bands.DeltaBands;
@@ -68,7 +69,7 @@ public class MALinesMakeARFFfromSQL {
 
 	public TreeMap<String, Integer> dateAttribute = new TreeMap<>();
 
-	public void makeARFFFromSQL(String sym, String dos) throws Exception {
+	public File makeARFFFromSQL(String sym, String dos) throws Exception {
 
 		Connection conn = null;
 
@@ -193,50 +194,46 @@ public class MALinesMakeARFFfromSQL {
 			}
 		}
 		pw.close();
+		return file;
 	}
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-	protected void getAttributeText(PrintWriter pw, MaLineParmToPass ptp, int start) {
+	public void getAttributeText(PrintWriter pw, MaLineParmToPass ptp, int start) {
 
 		Line ln, ln2, ln3;
 		String rsp1 = "?", rsp2 = "?", rsp3 = "?";
-
 		try {
+			Point pt0 = ptp.mali.getPoint(ptp.processDate, 0);
+			Point pt1 = ptp.mali.getPoint(ptp.processDate, 1);
+			ln = new Line(pt1, pt0);
+			Point pt2 = ptp.mali.getPoint(ptp.processDate, 2);
+			ln2 = new Line(pt2, pt0);
+			Point pt3 = ptp.mali.getPoint(ptp.processDate, 3);
+			ln3 = new Line(pt3, pt0);
+			Double xp = pt0.xPoint;
 			ln = ptp.mali.getCurrentLineIntercept(ptp.processDate, 1);
-			double yln = ptp.closes[start] * ln.slope + ln.yintersect;
+			double yln = ptp.closes[xp.intValue()] / ((pt0.xPoint + start) * ln.slope + ln.yintersect);
 			rsp1 = yln + "";
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-
-		}
-		try {
 			ln2 = ptp.mali.getCurrentLineIntercept(ptp.processDate, 2);
-			double yln2 = ptp.closes[start] * ln2.slope + ln2.yintersect;
+			double yln2 = ptp.closes[xp.intValue()] / ((pt0.xPoint + start) * ln2.slope + ln2.yintersect);
 			rsp2 = yln2 + "";
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-
-		}
-		try {
 			ln3 = ptp.mali.getCurrentLineIntercept(ptp.processDate, 3);
-			double yln3 = ptp.closes[start] * ln3.slope + ln3.yintersect;
+			double yln3 = ptp.closes[xp.intValue()] / ((pt0.xPoint + start) * ln3.slope + ln3.yintersect);
 			rsp3 = yln3 + "";
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-
 		}
-
 		pw.print(rsp1 + "," + rsp2 + "," + rsp3 + ",");
 
 	}
 
-	public void printAttributeData(int iday, int daysOut, PrintWriter pw, TreeMap<String, Object> macds, int[] arraypos,
-			double[] closes, String date, DeltaBands priceBands, boolean withAttributePosition) throws Exception {
+	public void printAttributeData(int iday, int daysOut, PrintWriter pw, TreeMap<String, Object> maLineParms,
+			int[] arraypos, double[] closes, String date, DeltaBands priceBands, boolean withAttributePosition)
+			throws Exception {
 		int pos = 0;
-		for (String key : macds.keySet()) {
+		for (String key : maLineParms.keySet()) {
 
-			MaLineParmToPass mlp = (MaLineParmToPass) macds.get(key);
+			MaLineParmToPass mlp = (MaLineParmToPass) maLineParms.get(key);
 			mlp.processDate = date;
 			getAttributeText(pw, mlp, daysOut);
 

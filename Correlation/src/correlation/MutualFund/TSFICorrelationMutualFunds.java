@@ -97,7 +97,7 @@ public class TSFICorrelationMutualFunds implements Runnable {
 		while (tsfiQue.isEmpty() == false)
 			Thread.sleep(1000);
 
-		PrintWriter pw = new PrintWriter("tsfCorrelationTSFOverSignal" + "_30days_" + "MutualFunds.csv");
+		PrintWriter pw = new PrintWriter("tsfCorrelationOverSignal" + "_30days_" + "MutualFunds.csv");
 		pw.println("abs Corr;tsf Sym;close Sym;tsf period;to Close Days Diff;tsf Days Diff;double Back; true Corr");
 
 		for (String sym : symbolsBest.keySet()) {

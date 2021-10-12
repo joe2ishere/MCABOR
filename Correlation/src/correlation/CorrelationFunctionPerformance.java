@@ -108,7 +108,10 @@ public class CorrelationFunctionPerformance {
 		ResultSet rsMktDates = selectMktDates.executeQuery();
 
 		rsDates: while (rsMktDates.next()) {
+
 			String mktDate = rsMktDates.getString(1);
+//			if (mktDate.compareTo("2010-10") < 0)
+//				continue;
 			int daysOut = rsMktDates.getInt(2);
 			boolean reported = false;
 
@@ -147,16 +150,23 @@ public class CorrelationFunctionPerformance {
 					}
 					double guess = rsResults.getDouble(1);
 					if (guess >= 7) {
+//						if (function.compareTo("Bad") == 0)
+//							System.out.println("at bad guess");
 						if (buy)
 							averages.get(daysOut).add(1);
 						else
 							averages.get(daysOut).add(0);
 					} else if (guess <= 2) {
+//						if (function.compareTo("Bad") == 0)
+//							System.out.println("at bad guess");
 						if (!buy)
 							averages.get(daysOut).add(1);
 						else
 							averages.get(daysOut).add(0);
+					} else {
+
 					}
+
 					rsResults.close();
 				}
 

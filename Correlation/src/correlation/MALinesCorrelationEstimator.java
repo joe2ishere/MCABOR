@@ -120,6 +120,7 @@ public class MALinesCorrelationEstimator extends CorrelationEstimator {
 		Classifier classifier = new RandomForest();
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
+
 	}
 
 }

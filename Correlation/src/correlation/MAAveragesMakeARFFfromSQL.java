@@ -13,18 +13,19 @@ import java.util.TreeMap;
 import java.util.logging.LogManager;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
-import com.tictactec.ta.lib.Core;
-import com.tictactec.ta.lib.MInteger;
+import com.americancoders.lineIntersect.Line;
+import com.americancoders.lineIntersect.Point;
+import com.tictactec.ta.lib.MAType;
 
 import bands.DeltaBands;
-import util.Realign;
+import movingAvgAndLines.MovingAvgAndLineIntercept;
 import util.getDatabaseConnection;
 
-public class TSFMakeARFFfromSQL {
+public class MAAveragesMakeARFFfromSQL {
 
 	boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
 
-	public TSFMakeARFFfromSQL(boolean b) {
+	public MAAveragesMakeARFFfromSQL(boolean b) {
 		withAttributePosition = b;
 	}
 
@@ -57,70 +58,77 @@ public class TSFMakeARFFfromSQL {
 			break;
 		}
 		sin.close();
-		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(false);
-		tsf.makeARFFFromSQL(sym, dos);
+		MAAveragesMakeARFFfromSQL malines = new MAAveragesMakeARFFfromSQL(false);
+		malines.makeARFFFromSQL(sym, dos);
 	}
 
 	public String getFilename(String sym, String dos) {
-		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_tsf_correlation.arff";
+
+		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_malavg_correlation.arff";
 	}
 
 	public TreeMap<String, Integer> dateAttribute = new TreeMap<>();
 
 	public File makeARFFFromSQL(String sym, String dos) throws Exception {
 
-		Core core = new Core();
 		Connection conn = null;
+
+		int attributePos = -1;
 
 		conn = getDatabaseConnection.makeConnection();
 
 		PreparedStatement ps = conn
-				.prepareStatement("select * from tsf_correlation" + " where symbol=? and toCloseDays=?  ");
+				.prepareStatement("select * from maline_correlation" + " where symbol=? and toCloseDays=?");
 
 		int daysOut = Integer.parseInt(dos);
 
 		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
-		String startDate = gsd.inDate[50];
 
-		TreeMap<String, double[]> tsfs = new TreeMap<>();
-		TreeMap<String, Integer> tsffunctionDaysDiff = new TreeMap<>();
-		TreeMap<String, Integer> doubleBacks = new TreeMap<>();
+		TreeMap<String, Object> malis = new TreeMap<>();
+		TreeMap<String, String[]> malDates = new TreeMap<>();
 
-		TreeMap<String, String[]> tsfDates = new TreeMap<>();
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
 
+		DeltaBands db = new DeltaBands(gsd.inClose, daysOut);
+		int pos = 200;
+		String startDate = gsd.inDate[pos];
+
 		File file = new File(getFilename(sym, dos));
 		PrintWriter pw = new PrintWriter(file);
-		pw.println("% 1. Title: " + sym + "_tsf_correlation");
-		pw.println("@RELATION " + sym + "_" + dos);
+		pw.println("% 1. Title: " + sym + "_malis_correlation");
+		pw.println("@RELATION " + sym + "_" + daysOut);
 
 		while (rs.next()) {
 
 			String functionSymbol = rs.getString("functionSymbol");
-			GetETFDataUsingSQL gsdTSF = GetETFDataUsingSQL.getInstance(functionSymbol);
 
-			if (startDate.compareTo(gsdTSF.inDate[50]) < 0)
-				startDate = gsdTSF.inDate[50];
+			GetETFDataUsingSQL pgsd = GetETFDataUsingSQL.getInstance(functionSymbol);
 
-			int tsfPeriod = rs.getInt("tsfPeriod");
+			if (startDate.compareTo(pgsd.inDate[pos]) < 0)
+				startDate = pgsd.inDate[pos];
 
-			double tsf[] = new double[gsdTSF.inClose.length];
-			MInteger outBegIdx = new MInteger();
-			MInteger outNBElement = new MInteger();
-			core.tsf(0, gsdTSF.inClose.length - 1, gsdTSF.inClose, tsfPeriod, outBegIdx, outNBElement, tsf);
+			int period = rs.getInt("period");
+			String matype = rs.getString("maType");
+			MAType maType = null;
+			for (MAType types : MAType.values()) {
+				if (types.name().compareTo(matype) == 0) {
+					maType = types;
+					break;
+				}
+			}
 
-			Realign.realign(tsf, outBegIdx.value);
+			MovingAvgAndLineIntercept mal = new MovingAvgAndLineIntercept(pgsd, period, maType, period, maType);
+			MaLineParmToPass mlp = new MaLineParmToPass(mal, pgsd.inClose, null);
+
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
-			tsfs.put(symKey, tsf);
-			int doubleBack = rs.getInt("doubleBack");
-			doubleBacks.put(symKey, doubleBack);
-			tsffunctionDaysDiff.put(symKey, rs.getInt("functionDaysDiff"));
-			pw.println("@ATTRIBUTE " + symKey + "tsf NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "tsfBack NUMERIC");
-			tsfDates.put(symKey, gsdTSF.inDate);
+
+			malis.put(symKey, mlp);
+
+			pw.println("@ATTRIBUTE " + symKey + "maAVG NUMERIC");
+			malDates.put(symKey, pgsd.inDate);
+
 		}
 
 		if (withAttributePosition)
@@ -130,17 +138,16 @@ public class TSFMakeARFFfromSQL {
 
 		pw.println("@DATA");
 
-		int arraypos[] = new int[tsfs.size()];
-		int pos = 50;
+		int arraypos[] = new int[malis.size()];
+
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 
-		int attributePos = -1;
 		eemindexLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut - 1;) {
 			String posDate = gsd.inDate[iday];
 			pos = 0;
-			for (String key : tsfs.keySet()) {
-				String sdate = tsfDates.get(key)[arraypos[pos]];
+			for (String key : malis.keySet()) {
+				String sdate = malDates.get(key)[arraypos[pos]];
 				int dcomp = posDate.compareTo(sdate);
 				if (dcomp < 0) {
 					iday++;
@@ -154,20 +161,6 @@ public class TSFMakeARFFfromSQL {
 			}
 
 			pos = 0;
-			for (String key : tsfs.keySet()) {
-				int giDay = iday - tsffunctionDaysDiff.get(key);
-				int siDay = arraypos[pos] - tsffunctionDaysDiff.get(key);
-
-				for (int i = 0; i < (tsffunctionDaysDiff.get(key) + daysOut); i++) {
-					String gtest = gsd.inDate[giDay + i];
-					String stest = tsfDates.get(key)[siDay + i];
-					if (gtest.compareTo(stest) != 0) {
-						iday++;
-						continue eemindexLoop;
-					}
-				}
-				pos++;
-			}
 			Date now = sdf.parse(posDate);
 
 			Calendar cdMove = Calendar.getInstance();
@@ -186,44 +179,53 @@ public class TSFMakeARFFfromSQL {
 					break;
 			}
 			String endDate = gsd.inDate[iday + daysOut];
+			dateAttribute.put(gsd.inDate[iday], ++attributePos);
 			if (daysOutCalc != daysOut)
 				System.out.println(posDate + " here " + endDate + " by " + daysOutCalc + " not " + daysOut);
 
-			printAttributeData(iday, daysOut, pw, tsfs, tsffunctionDaysDiff, doubleBacks, arraypos, gsd.inClose, db,
+			printAttributeData(iday, daysOut, pw, malis, arraypos, gsd.inClose, gsd.inDate[iday], db,
 					withAttributePosition);
-			dateAttribute.put(gsd.inDate[iday], ++attributePos);
+
 			iday++;
 			for (pos = 0; pos < arraypos.length; pos++) {
 				arraypos[pos]++;
 			}
-
 		}
-
 		pw.close();
 		return file;
 	}
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-	public String getAttributeText(double tsf[], int tsffunctionDaysDiff, int tsfstart, int doubleBack) {
-		return tsf[tsfstart - doubleBack] + "," + tsf[tsfstart - (tsffunctionDaysDiff + doubleBack)] + ",";
+	public void getAttributeText(PrintWriter pw, MaLineParmToPass ptp, int start) {
 
+		Line ln;
+		String rsp1 = "?";
+		try {
+			Point pt0 = ptp.mali.getPoint(ptp.processDate, 0);
+			Point pt1 = ptp.mali.getPoint(ptp.processDate, 1);
+			Point pt2 = ptp.mali.getPoint(ptp.processDate, 2);
+			Point pt3 = ptp.mali.getPoint(ptp.processDate, 3);
+			Point ptavg = new Point((pt1.xPoint + pt2.xPoint + pt3.xPoint) / 3,
+					(pt1.yPoint + pt2.yPoint + pt3.yPoint) / 3);
+			ln = new Line(ptavg, pt0);
+			Double xp = pt0.xPoint;
+			double yln = ptp.closes[xp.intValue()] / (((pt0.xPoint + start) * ln.slope) + ln.yintersect);
+			rsp1 = yln + "";
+		} catch (Exception e) {
+		}
+		pw.print(rsp1 + ",");
 	}
 
-	public void printAttributeData(int iday, int daysOut, PrintWriter pw, Object inParms,
-			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
-			double[] closes, DeltaBands priceBands, boolean withAttributePosition) {
-		TreeMap<String, double[]> tsfs = (TreeMap<String, double[]>) inParms;
+	public void printAttributeData(int iday, int daysOut, PrintWriter pw, TreeMap<String, Object> maLineParms,
+			int[] arraypos, double[] closes, String date, DeltaBands priceBands, boolean withAttributePosition)
+			throws Exception {
 		int pos = 0;
-		for (String key : tsfs.keySet()) {
+		for (String key : maLineParms.keySet()) {
 
-			double tsf[] = tsfs.get(key);
-			int tsffunctionDaysDiff = functionDaysDiffMap.get(key);
-			int tsfstart = arraypos[pos];
-			Integer doubleBack = doubleBacks.get(key);
-			if (doubleBack == null)
-				doubleBack = 0;
-			pw.print(getAttributeText(tsf, tsffunctionDaysDiff, tsfstart, doubleBack.intValue()));
+			MaLineParmToPass mlp = (MaLineParmToPass) maLineParms.get(key);
+			mlp.processDate = date;
+			getAttributeText(pw, mlp, daysOut);
 
 			pos++;
 
