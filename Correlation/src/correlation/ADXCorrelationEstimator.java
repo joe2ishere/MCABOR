@@ -95,8 +95,10 @@ public class ADXCorrelationEstimator extends CorrelationEstimator {
 			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
 			double[] inClose, DeltaBands priceBands) {
 
-		makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, functionDaysDiffMap, doubleBacks, arraypos, inClose,
-				priceBands, true);
+//		StringBuffer sb = makeSQL.printAttributeData(iday, daysOutCalc, myParms, functionDaysDiffMap, doubleBacks,
+//				arraypos, inClose, priceBands, true);
+//		if (sb != null)
+//			pw.print(sb.toString());
 
 	}
 

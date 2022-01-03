@@ -92,7 +92,7 @@ public class MAAveragerCorrelationEstimator extends CorrelationEstimator {
 			double[] inClose, DeltaBands priceBands) {
 		try {
 			makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, arraypos, inClose, processDate, priceBands,
-					true);
+					false);
 		} catch (Exception e) {
 
 			e.printStackTrace();

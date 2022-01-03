@@ -102,8 +102,6 @@ public class DMIMakeARFFfromSQL {
 
 			String functionSymbol = rs.getString("functionSymbol");
 
-			double absCorr = Math.abs(rs.getDouble("correlation"));
-
 			GetETFDataUsingSQL gsdDMI = GetETFDataUsingSQL.getInstance(functionSymbol);
 
 			if (startDate.compareTo(gsdDMI.inDate[50]) < 0)

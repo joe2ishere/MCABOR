@@ -45,7 +45,7 @@ public class PerformanceFromDBForPDF {
 
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 		FileReader fr = new FileReader("xmlFilesForPDFReports/Report-Performance-FO.xml");
-		StringBuffer sb = new StringBuffer();
+		StringBuffer sb = new StringBuffer(1000);
 		BufferedReader br = new BufferedReader(fr);
 		String in = "";
 		while ((in = br.readLine()) != null) {
@@ -54,7 +54,7 @@ public class PerformanceFromDBForPDF {
 		br.close();
 
 		String allText = sb.toString();
-		sb = new StringBuffer();
+		sb = new StringBuffer(1000);
 		TreeMap<Integer, Averager> allDaysAverage = new TreeMap<>();
 		TreeMap<String, TreeMap<Integer, Averager>> allSheetsDaysAverage = new TreeMap<>();
 		String rptDate = null;
@@ -221,7 +221,7 @@ public class PerformanceFromDBForPDF {
 
 		allText = allText.replace("<!--   <<<<% correct for calls for date>>>> -->", sb.toString());
 		allText = allText.replace("<<<<Current Report Date>>>>", rptDate);
-		sb = new StringBuffer();
+		sb = new StringBuffer(1000);
 		for (String key : allSheetsDaysAverage.keySet()) {
 			TreeMap<Integer, Averager> sheetDaysAverage = allSheetsDaysAverage.get(key);
 

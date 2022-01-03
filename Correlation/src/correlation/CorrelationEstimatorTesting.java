@@ -121,7 +121,7 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 			if (catAvg == null) {
 				catAvg = new TreeMap<Integer, Averager>();
 				catAverages.put(cat, catAvg);
-				catETFList.put(cat, new StringBuffer());
+				catETFList.put(cat, new StringBuffer(1000));
 			}
 			symCats.put(sym, cat);
 			StringBuffer catList = catETFList.get(cat);
@@ -211,7 +211,7 @@ public class CorrelationEstimatorTesting extends CorrelationEstimator {
 //			for (int daysOut : daysOutList) {
 //				String badnessFileName = "c:/users/joe/correlationARFF/bad/" + sym + "_" + daysOut
 //						+ "_allbad_correlation.arff";
-//				StringBuffer sb = new StringBuffer();
+//				StringBuffer sb = new StringBuffer(1000);
 //				String in = "";
 //				BufferedReader brBad = new BufferedReader(new FileReader(badnessFileName));
 //				while ((in = brBad.readLine()) != null) {

@@ -1,8 +1,10 @@
 package correlation.MyBad;
 
 import java.io.FileReader;
+import java.sql.Connection;
 
 import correlation.ADXMakeARFFfromSQL;
+import util.getDatabaseConnection;
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
 import weka.core.Instance;
@@ -18,7 +20,8 @@ public class ADX {
 						"weka.classifiers.trees.RandomForest", "--", "-I", "160", "-K", "5", "-depth", "15" });
 
 		ADXMakeARFFfromSQL adx = new ADXMakeARFFfromSQL();
-		adx.makeARFFFromSQL(sym, dos);
+		Connection conn = getDatabaseConnection.makeConnection();
+		adx.makeARFFFromSQL(sym, dos, conn);
 		ArffReader ar = new ArffReader(new FileReader(adx.getFilename(sym, dos)));
 		int classPos = ar.getData().numAttributes() - 1;
 		ar.getData().setClassIndex(classPos);

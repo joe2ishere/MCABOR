@@ -45,7 +45,7 @@ public class MALinesCorrelationMutualFunds implements Runnable {
 				continue;
 			}
 
-			if (cnt < 2000) {
+			if (cnt < 1900) {
 				System.out.println("skipping " + sym + " with cnt of " + cnt);
 				continue;
 
@@ -141,7 +141,7 @@ public class MALinesCorrelationMutualFunds implements Runnable {
 
 					Line ln, ln2, ln3, ln4;
 
-					for (int priceDaysDiff = 30; priceDaysDiff <= 45; priceDaysDiff += 1) {
+					for (int priceDaysDiff = 30; priceDaysDiff <= 45; priceDaysDiff += 2) {
 						{
 							for (String closeSym : mfcloses.keySet()) {
 
@@ -188,7 +188,7 @@ public class MALinesCorrelationMutualFunds implements Runnable {
 												ln = mali.getCurrentLineIntercept(pgsd.inDate[closingDayIndex], 1);
 												ln2 = mali.getCurrentLineIntercept(pgsd.inDate[closingDayIndex], 2);
 												ln3 = mali.getCurrentLineIntercept(pgsd.inDate[closingDayIndex], 3);
-												ln4 = mali.getCurrentLineIntercept(pgsd.inDate[closingDayIndex], 4);
+
 												if (ln == null | ln2 == null | ln3 == null) {
 													maDayIndex++;
 													closingDayIndex++;
@@ -206,12 +206,10 @@ public class MALinesCorrelationMutualFunds implements Runnable {
 														+ ln2.yintersect;
 												double yln3 = pgsd.inClose[maDayIndex + priceDaysDiff] * ln3.slope
 														+ ln3.yintersect;
-												double yln4 = pgsd.inClose[maDayIndex + priceDaysDiff] * ln4.slope
-														+ ln4.yintersect;
+
 												ccArray1.add(closes.get(closingDayIndex + priceDaysDiff)
 														/ closes.get(closingDayIndex));
-												ccArray2.add(
-														((yln + yln2 + yln3 + yln4) / 4) / pgsd.inClose[maDayIndex]);
+												ccArray2.add(((yln + yln2 + yln3) / 3) / pgsd.inClose[maDayIndex]);
 												maDayIndex++;
 												closingDayIndex++;
 											} catch (Exception e) {

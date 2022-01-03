@@ -5,8 +5,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.logging.LogManager;
@@ -51,7 +49,8 @@ public class ADXMakeARFFfromSQL {
 		}
 		sin.close();
 		ADXMakeARFFfromSQL adx = new ADXMakeARFFfromSQL();
-		adx.makeARFFFromSQL(sym, dos);
+		Connection conn = null;
+		adx.makeARFFFromSQL(sym, dos, conn);
 	}
 
 	public String getFilename(String sym, String dos) {
@@ -60,11 +59,11 @@ public class ADXMakeARFFfromSQL {
 
 	public TreeMap<String, Integer> dateAttribute = new TreeMap<>();
 
-	public void makeARFFFromSQL(String sym, String dos) throws Exception {
+	public void makeARFFFromSQL(String sym, String dos, Connection conn) throws Exception {
 
 		boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
+		ADXParms adxp = new ADXParms();
 		Core core = new Core();
-		Connection conn = null;
 
 		conn = getDatabaseConnection.makeConnection();
 
@@ -77,16 +76,10 @@ public class ADXMakeARFFfromSQL {
 		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
 		String startDate = gsd.inDate[50];
 
-		TreeMap<String, double[]> adxs = new TreeMap<>();
-		TreeMap<String, Integer> adxfunctionDaysDiff = new TreeMap<>();
-		TreeMap<String, Integer> doubleBacks = new TreeMap<>();
-
-		TreeMap<String, String[]> adxDates = new TreeMap<>();
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
 
-		String in;
 		PrintWriter pw = new PrintWriter(getFilename(sym, dos));
 		pw.println("% 1. Title: " + sym + "_adx_correlation");
 		pw.println("@RELATION " + sym + "_" + dos);
@@ -99,7 +92,6 @@ public class ADXMakeARFFfromSQL {
 
 			if (startDate.compareTo(gsdADX.inDate[50]) < 0) {
 				startDate = gsdADX.inDate[50];
-				System.out.println(startDate + " " + functionSymbol);
 			}
 
 			int period = rs.getInt("period");
@@ -113,12 +105,14 @@ public class ADXMakeARFFfromSQL {
 			Realign.realign(adx, outBegIdx.value);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
 
-			adxs.put(symKey, adx);
-			doubleBacks.put(symKey, rs.getInt("doubleBack"));
-			adxfunctionDaysDiff.put(symKey, rs.getInt("functionDaysDiff"));
+			adxp.addSymbol(symKey);
+			adxp.setADXS(symKey, adx);
+			adxp.setDoubleBacks(symKey, rs.getInt("doubleBack"));
+			adxp.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
+			adxp.setAttrDates(symKey, gsdADX.inDate);
+
 			pw.println("@ATTRIBUTE " + symKey + "adx NUMERIC");
 			// pw.println("@ATTRIBUTE " + symKey + "adxback NUMERIC");
-			adxDates.put(symKey, gsdADX.inDate);
 		}
 		if (withAttributePosition)
 			pw.println("@ATTRIBUTE class NUMERIC");
@@ -126,82 +120,16 @@ public class ADXMakeARFFfromSQL {
 			pw.println(db.getAttributeDefinition());
 
 		pw.println("@DATA");
-
-		int arraypos[] = new int[adxs.size()];
 		int pos = 50;
-		 
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 
-		int attributePos = -1;
-		eemindexLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut - 1;) {
-			String posDate = gsd.inDate[iday];
-			pos = 0;
-			for (String key : adxs.keySet()) {
-				String sdate = adxDates.get(key)[arraypos[pos]];
-				int dcomp = posDate.compareTo(sdate);
-				if (dcomp < 0) {
-					iday++;
-					continue eemindexLoop;
-				}
-				if (dcomp > 0) {
-					arraypos[pos]++;
-					continue eemindexLoop;
-				}
-				pos++;
-			}
+		for (int iday = pos; iday < gsd.inDate.length - daysOut - 1; iday++) {
 
-			pos = 0;
-			for (String key : adxs.keySet()) {
-				int giDay = iday - adxfunctionDaysDiff.get(key);
-				int siDay = arraypos[pos] - adxfunctionDaysDiff.get(key);
-
-				for (int i = 0; i < (adxfunctionDaysDiff.get(key) + daysOut); i++) {
-					String gtest = gsd.inDate[giDay + i];
-					String stest = adxDates.get(key)[siDay + i];
-					if (gtest.compareTo(stest) != 0) {
-						iday++;
-						continue eemindexLoop;
-					}
-				}
-				pos++;
-			}
-			Date now = null;
-			try {
-				now = sdf.parse(posDate);
-			} catch (Exception e) {
-				System.out.println(e.getLocalizedMessage() + ";" + posDate);
-				e.printStackTrace();
-			}
-
-			Calendar cdMove = Calendar.getInstance();
-			cdMove.setTime(now);
-			int idt = 1;
-			int daysOutCalc = 0;
-			while (true) {
-				cdMove.add(Calendar.DAY_OF_MONTH, +1);
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY)
-					continue;
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY)
-					continue;
-				daysOutCalc++;
-				idt++;
-				if (idt > daysOut)
-					break;
-			}
-			String endDate = gsd.inDate[iday + daysOut];
-			if (daysOutCalc != daysOut)
-				System.out.println(posDate + " here " + endDate + " by " + daysOutCalc + " not " + daysOut);
-
-//			ADXMakeARFFfromCorrelationFile.printAttributeData(iday, daysOut, pw, adxs, adxfunctionDaysDiff, arraypos, gsd.inClose,
-//					bavg, savg);
-			printAttributeData(iday, daysOut, pw, adxs, adxfunctionDaysDiff, doubleBacks, arraypos, gsd.inClose, db,
-					withAttributePosition);
-			dateAttribute.put(gsd.inDate[iday], ++attributePos);
-			iday++;
-			for (pos = 0; pos < arraypos.length; pos++) {
-				arraypos[pos]++;
-			}
+			StringBuffer sb = printAttributeData(iday, gsd.inDate, daysOut, adxp, gsd.inClose, db,
+					withAttributePosition, false);
+			if (sb != null)
+				pw.print(sb.toString());
 
 		}
 
@@ -215,30 +143,50 @@ public class ADXMakeARFFfromSQL {
 
 	}
 
-	public void printAttributeData(int iday, int daysOut, PrintWriter pw, Object inParms,
-			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
-			double[] closes, DeltaBands priceBands, boolean withAttributePosition) {
+	public StringBuffer printAttributeData(int iday, String etfDates[], int daysOut, ADXParms adxp, double[] closes,
+			DeltaBands priceBands, boolean withAttributePosition, boolean forLastUseQuestionMark) {
 
-		TreeMap<String, double[]> adxs = (TreeMap<String, double[]>) inParms;
-		int pos = 0;
-		for (String key : adxs.keySet()) {
+		StringBuffer returnBuffer = new StringBuffer(1000);
 
-			double adx[] = adxs.get(key);
-			int adxfunctionDaysDiff = functionDaysDiffMap.get(key);
-			int adxstart = arraypos[pos];
-			Integer doubleBack = doubleBacks.get(key);
+		for (String key : adxp.keySet()) {
+			String dates[] = adxp.getAttrDates(key);
+			int adxstart = adxp.getLastDateStart(key);
+			for (; adxstart < dates.length; adxstart++) {
+				if (dates[adxstart].compareTo(etfDates[iday]) == 0)
+					break;
+				if (dates[adxstart].compareTo(etfDates[iday]) > 0)
+					return null;
+			}
+			int adxfunctionDaysDiff = adxp.getDaysDiff(key);
+			Integer doubleBack = adxp.getDoubleBacks(key);
+			// are we missing any days in between
+			int giDay = iday - adxfunctionDaysDiff;
+			int siDay = adxstart - adxfunctionDaysDiff;
+			// are we missing any days in between
+			for (int i = 0; i < (adxfunctionDaysDiff + daysOut); i++) {
+				String gtest = etfDates[giDay + i];
+				String stest = dates[siDay + i];
+				if (gtest.compareTo(stest) != 0) {
+					return null;
+				}
+			}
+			adxp.setLastDateStart(key, adxstart);
+			double adxs[] = adxp.getADXS(key);
+
 			if (doubleBack == null)
 				doubleBack = 0;
-			pw.print(getAttributeText(adx, adxfunctionDaysDiff, adxstart, doubleBack.intValue()));
-
-			pos++;
+			returnBuffer.append(getAttributeText(adxs, adxfunctionDaysDiff, adxstart, doubleBack.intValue()));
 
 		}
-		if (withAttributePosition)
-			pw.println(priceBands.getAttributePosition(iday, daysOut, closes));
+		if (forLastUseQuestionMark)
+			returnBuffer.append("?");
+		else if (withAttributePosition)
+			returnBuffer.append(priceBands.getAttributePosition(iday, daysOut, closes));
 		else
-			pw.println(priceBands.getAttributeValue(iday, daysOut, closes));
+			returnBuffer.append(priceBands.getAttributeValue(iday, daysOut, closes));
 
+		returnBuffer.append("\n");
+		return returnBuffer;
 	}
 
 }

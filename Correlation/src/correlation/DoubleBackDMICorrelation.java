@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -34,6 +35,10 @@ public class DoubleBackDMICorrelation implements Runnable {
 		}
 
 	}
+
+	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 180 days
+	// if 180 days then just a limited number of etfs are done.
+	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld"));
 
 	public static void main(String[] args) throws Exception {
 
@@ -105,8 +110,8 @@ public class DoubleBackDMICorrelation implements Runnable {
 
 	}
 
-	File doneFile = new File("dmiDoubleDone.txt");
-	static File tabFile = new File("dmiDoubleTaB.txt");
+	File doneFile = new File("dmiDoubleDone" + (doingBigDayDiff ? "180Days" : "") + ".txt");
+	static File tabFile = new File("dmiDoubleTaB" + (doingBigDayDiff ? "180Days" : "") + ".txt");
 
 	public void loadTables() {
 		if (doneFile.exists() == false)
@@ -213,10 +218,14 @@ public class DoubleBackDMICorrelation implements Runnable {
 					if (cu.updateSymbol != null)
 						if (cu.updateSymbol.contains(closingSymbol) == false)
 							continue;
-
+					if (doingBigDayDiff) {
+						if (bigDaysDiffList.contains(closingSymbol) == false)
+							continue;
+					}
 					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
 
-					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= 30; pricefunctionDaysDiff += 1) {
+					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 180
+							: 30); pricefunctionDaysDiff += 1) {
 
 						for (int dmifunctionDaysDiff = 1; dmifunctionDaysDiff <= 9; dmifunctionDaysDiff += 1) {
 							{

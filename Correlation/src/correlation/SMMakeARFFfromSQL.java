@@ -1,5 +1,6 @@
 package correlation;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -57,6 +58,7 @@ public class SMMakeARFFfromSQL {
 		}
 		sin.close();
 		SMMakeARFFfromSQL sm = new SMMakeARFFfromSQL(false);
+
 		sm.makeARFFFromSQL(sym, dos);
 	}
 
@@ -66,12 +68,8 @@ public class SMMakeARFFfromSQL {
 
 	public TreeMap<String, Integer> dateAttribute = new TreeMap<>();
 
-	public void makeARFFFromSQL(String sym, String dos) throws Exception {
-
-		Connection conn = null;
-
-		conn = getDatabaseConnection.makeConnection();
-
+	public File makeARFFFromSQL(String sym, String dos) throws Exception {
+		Connection conn = getDatabaseConnection.makeConnection();
 		PreparedStatement ps = conn
 				.prepareStatement("select * from sm_correlation" + " where symbol=?  and  toCloseDays=?");
 
@@ -91,8 +89,8 @@ public class SMMakeARFFfromSQL {
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
-
-		PrintWriter pw = new PrintWriter(getFilename(sym, dos));
+		File file = new File(getFilename(sym, dos));
+		PrintWriter pw = new PrintWriter(file);
 		pw.println("% 1. Title: " + sym + "_smi_correlation");
 		pw.println("@RELATION " + sym + "_" + dos);
 
@@ -117,6 +115,10 @@ public class SMMakeARFFfromSQL {
 			smfunctionDaysDiff.put(symKey, rs.getInt("functionDaysDiff"));
 			pw.println("@ATTRIBUTE " + symKey + "smi NUMERIC");
 			pw.println("@ATTRIBUTE " + symKey + "signal NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "smi2 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "signal2 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "smi3 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "signal3 NUMERIC");
 
 			smDates.put(symKey, pgsd.inDate);
 
@@ -200,13 +202,16 @@ public class SMMakeARFFfromSQL {
 		}
 
 		pw.close();
+		return file;
 
 	}
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
 	public String getAttributeText(StochasticMomentum sm, int smfunctionDaysDiff, int smstart, int doubleBack) {
-		return (sm.SMI[smstart] + "," + sm.Signal[smstart] + ",");
+		return (sm.SMI[smstart - doubleBack] + "," + sm.SMI[smstart - (doubleBack + 1)] + ","
+				+ sm.SMI[smstart - (doubleBack + 2)] + "," + sm.Signal[smstart - doubleBack] + ","
+				+ sm.Signal[smstart - (doubleBack + 1)] + "," + sm.Signal[smstart - (doubleBack + 2)] + ",");
 
 	}
 

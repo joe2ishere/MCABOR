@@ -26,7 +26,7 @@ import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
 import weka.core.Instances;
 
-public class MakeMFBuySellReportUsingBB {
+public class ReportUsingBB {
 
 	public static void main(String[] args) throws Exception {
 
@@ -181,8 +181,8 @@ public class MakeMFBuySellReportUsingBB {
 						pos++;
 					}
 
-					makeFromSQL.printAttributeData(iday, daysOut, bbPW, bbs, bbDaysDiff, bbDoubleBacks, arraypos,
-							dcloses, priceBands, false);
+//					makeFromSQL.printAttributeData(iday, daysOut, bbPW, bbs, bbDaysDiff, bbDoubleBacks, arraypos,
+//							dcloses, priceBands, false);
 
 					pos = 0;
 					for (pos = 0; pos < arraypos.length; pos++) {

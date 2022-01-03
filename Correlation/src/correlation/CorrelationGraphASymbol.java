@@ -81,24 +81,27 @@ public class CorrelationGraphASymbol {
 		TreeMap<Integer, Averager> performanceAverageForDaysOut = new TreeMap<>();
 
 		ArrayList<Double> dmiAverages = new ArrayList<>(30);
-		ArrayList<Double> macdAverages = new ArrayList<>(30);
 		ArrayList<Double> maavgAverages = new ArrayList<>(30);
+		ArrayList<Double> macdAverages = new ArrayList<>(30);
 		ArrayList<Double> maliAverages = new ArrayList<>(30);
+		ArrayList<Double> smiAverages = new ArrayList<>(30);
 		ArrayList<Double> tsfAverages = new ArrayList<>(30);
 		for (int i = 0; i < 30; i++) {
 			dmiAverages.add(0.);
-			macdAverages.add(0.);
 			maavgAverages.add(0.);
+			macdAverages.add(0.);
 			maliAverages.add(0.);
+			smiAverages.add(0.);
 			tsfAverages.add(0.);
 		}
 
 		System.out.println(sym);
 
 		TreeMap<Integer, Averager> dmiaverageForDaysOut = new TreeMap<>();
-		TreeMap<Integer, Averager> macdaverageForDaysOut = new TreeMap<>();
 		TreeMap<Integer, Averager> maavgaverageForDaysOut = new TreeMap<>();
+		TreeMap<Integer, Averager> macdaverageForDaysOut = new TreeMap<>();
 		TreeMap<Integer, Averager> maliaverageForDaysOut = new TreeMap<>();
+		TreeMap<Integer, Averager> smiaverageForDaysOut = new TreeMap<>();
 		TreeMap<Integer, Averager> tsfaverageForDaysOut = new TreeMap<>();
 		TreeMap<Integer, Double> errorDaysOut = new TreeMap<>();
 		TreeMap<String, Double> theBadness = new TreeMap<>();
@@ -125,6 +128,20 @@ public class CorrelationGraphASymbol {
 					dmi.run();
 					double got = dmiaverageForDaysOut.get(daysOut).get();
 					doAverages(dmiAverages, got, daysOut, priceBands);
+				} catch (Exception e1) {
+					e1.printStackTrace();
+					return;
+				}
+			}));
+
+			threads.add(new Thread(() -> {
+				try {
+					maavgaverageForDaysOut.put(daysOut, new Averager());
+					MAAveragerCorrelationEstimator maavg = new MAAveragerCorrelationEstimator(conn);
+					maavg.setWork(sym, daysOut, priceBands, maavgaverageForDaysOut, theBadness);
+					maavg.run();
+					double got = maavgaverageForDaysOut.get(daysOut).get();
+					doAverages(maavgAverages, got, daysOut, priceBands);
 				} catch (Exception e1) {
 					e1.printStackTrace();
 					return;
@@ -162,12 +179,12 @@ public class CorrelationGraphASymbol {
 
 			threads.add(new Thread(() -> {
 				try {
-					maavgaverageForDaysOut.put(daysOut, new Averager());
-					MAAveragerCorrelationEstimator maavg = new MAAveragerCorrelationEstimator(conn);
-					maavg.setWork(sym, daysOut, priceBands, maavgaverageForDaysOut, theBadness);
-					maavg.run();
-					double got = maavgaverageForDaysOut.get(daysOut).get();
-					doAverages(maavgAverages, got, daysOut, priceBands);
+					smiaverageForDaysOut.put(daysOut, new Averager());
+					SMICorrelationEstimator smi = new SMICorrelationEstimator(conn);
+					smi.setWork(sym, daysOut, priceBands, smiaverageForDaysOut, theBadness);
+					smi.run();
+					double got = smiaverageForDaysOut.get(daysOut).get();
+					doAverages(smiAverages, got, daysOut, priceBands);
 				} catch (Exception e1) {
 					e1.printStackTrace();
 					return;
@@ -197,7 +214,7 @@ public class CorrelationGraphASymbol {
 
 			String badnessFileName = "c:/users/joe/correlationARFF/bad/" + sym + "_" + daysOut
 					+ "_allbad_correlation.arff";
-			StringBuffer sb = new StringBuffer();
+			StringBuffer sb = new StringBuffer(1000);
 			String in = "";
 			BufferedReader brBad = new BufferedReader(new FileReader(badnessFileName));
 			while ((in = brBad.readLine()) != null) {
@@ -206,9 +223,10 @@ public class CorrelationGraphASymbol {
 			brBad.close();
 
 			sb.append(theBadness.get("dmi;" + daysOut) + ",");
-			sb.append(theBadness.get("macd;" + daysOut) + ",");
 			sb.append(theBadness.get("maAvg;" + daysOut) + ",");
+			sb.append(theBadness.get("macd;" + daysOut) + ",");
 			sb.append(theBadness.get("mali;" + daysOut) + ",");
+			sb.append(theBadness.get("smi;" + daysOut) + ",");
 			sb.append(theBadness.get("tsf;" + daysOut) + ",");
 			sb.append("?");
 			Instances instances = new Instances(new StringReader(sb.toString()));
@@ -252,9 +270,10 @@ public class CorrelationGraphASymbol {
 		}
 
 		chart.addSeries("DMI", dmiAverages).setMarker(SeriesMarkers.CROSS).setLineWidth(1);
+		chart.addSeries("MAAVG", maavgAverages).setMarker(SeriesMarkers.RECTANGLE).setLineWidth(1);
 		chart.addSeries("MACD", macdAverages).setMarker(SeriesMarkers.DIAMOND).setLineWidth(1);
-		chart.addSeries("MAAVG", maliAverages).setMarker(SeriesMarkers.RECTANGLE).setLineWidth(1);
 		chart.addSeries("MALI", maliAverages).setMarker(SeriesMarkers.SQUARE).setLineWidth(1);
+		chart.addSeries("SMI", smiAverages).setMarker(SeriesMarkers.CIRCLE).setLineWidth(1);
 		chart.addSeries("TSF", tsfAverages).setMarker(SeriesMarkers.TRAPEZOID).setLineWidth(1);
 		chart.addSeries("Err Correction", tsfAverages).setMarker(SeriesMarkers.OVAL).setLineWidth(2);
 

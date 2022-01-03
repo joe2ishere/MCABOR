@@ -37,7 +37,7 @@ public class MoveSpreadSheetToSql {
 				}
 
 				String symbol = cell.getContents();
-				StringBuffer sb = new StringBuffer();
+				StringBuffer sb = new StringBuffer(1000);
 				for (int r = 1; r < 31; r++) {
 					Cell cellRow = rows[r];
 					sb.append(cellRow.getContents());

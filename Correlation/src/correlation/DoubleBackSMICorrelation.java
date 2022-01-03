@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -24,12 +25,17 @@ public class DoubleBackSMICorrelation implements Runnable {
 	static public class Queue {
 		String sym;
 		double[] smis;
+		double[] signals;
 		int hilowPeriod;
 		int smoothPeriod;
 		String[] dates;
 		public int maPeriod;
 		public int singnalPeriod;
 	}
+
+	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 180 days
+	// if 180 days then just a limited number of etfs are done.
+	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld"));
 
 	public static void main(String[] args) throws Exception {
 
@@ -56,9 +62,9 @@ public class DoubleBackSMICorrelation implements Runnable {
 			if (cu.symList.get(smiSym) < cu.entryLimit)
 				continue;
 			System.out.println("running " + smiSym);
-			for (int hiLowPeriod = 3; hiLowPeriod <= 21; hiLowPeriod += 3) {
+			for (int hiLowPeriod = 2; hiLowPeriod <= 21; hiLowPeriod += 3) {
 				for (int maPeriod = 2; maPeriod <= 4; maPeriod += 1) {
-					for (int smSmoothPeriod = 2; smSmoothPeriod <= 10; smSmoothPeriod += 2) {
+					for (int smSmoothPeriod = 2; smSmoothPeriod <= 5; smSmoothPeriod += 1) {
 						for (int smSignalPeriod = 2; smSignalPeriod <= 4; smSignalPeriod += 1) {
 							StochasticMomentum sm = new StochasticMomentum(smiGSD.inHigh, smiGSD.inLow, smiGSD.inClose,
 									hiLowPeriod, MAType.Ema, maPeriod, smSmoothPeriod, smSignalPeriod);
@@ -70,6 +76,7 @@ public class DoubleBackSMICorrelation implements Runnable {
 							q.singnalPeriod = smSignalPeriod;
 							q.smoothPeriod = smSmoothPeriod;
 							q.smis = sm.SMI;
+							q.signals = sm.Signal;
 							smiQue.put(q);
 
 						}
@@ -101,8 +108,8 @@ public class DoubleBackSMICorrelation implements Runnable {
 
 	}
 
-	File doneFile = new File("smiDoubleDone.txt");
-	static File tabFile = new File("smiDoubleTaB.txt");
+	File doneFile = new File("smiDoubleDone" + (doingBigDayDiff ? "180Days" : "") + ".txt");
+	static File tabFile = new File("smiDoubleTaB" + (doingBigDayDiff ? "180Days" : "") + ".txt");
 
 	public void loadTables() {
 		if (doneFile.exists() == false)
@@ -209,11 +216,16 @@ public class DoubleBackSMICorrelation implements Runnable {
 					if (cu.updateSymbol != null)
 						if (cu.updateSymbol.contains(closingSymbol) == false)
 							continue;
+					if (doingBigDayDiff) {
+						if (bigDaysDiffList.contains(closingSymbol) == false)
+							continue;
+					}
 					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
 
-					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= 30; pricefunctionDaysDiff += 1) {
+					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 180
+							: 30); pricefunctionDaysDiff += 1) {
 
-						for (int smifunctionDaysDiff = 1; smifunctionDaysDiff <= 5; smifunctionDaysDiff += 2) {
+						for (int smifunctionDaysDiff = 0; smifunctionDaysDiff <= 1; smifunctionDaysDiff += 1) {
 							{
 								/*
 								 * ccarray1 has to be computed here so the dates align correctly
@@ -226,7 +238,7 @@ public class DoubleBackSMICorrelation implements Runnable {
 
 								int startSMIDay = smiDayIndex;
 								int startClosingDay = closingDayIndex;
-								nextDD: for (int smiDaysBack = 0; smiDaysBack < 1; smiDaysBack += 1) {
+								nextDD: for (int smiDaysBack = 0; smiDaysBack < 2; smiDaysBack += 1) {
 									ArrayList<Double> ccArray1 = new ArrayList<Double>();
 									ArrayList<Double> ccArray2 = new ArrayList<Double>();
 
@@ -251,8 +263,8 @@ public class DoubleBackSMICorrelation implements Runnable {
 										}
 										ccArray1.add(closingGSD.inClose[closingDayIndex + pricefunctionDaysDiff]
 												/ closingGSD.inClose[closingDayIndex]);
-										ccArray2.add((q.smis[smiDayIndex - (smiDaysBack)]
-												+ q.smis[smiDayIndex - (smifunctionDaysDiff + smiDaysBack)]) / 2);
+										ccArray2.add((q.smis[smiDayIndex]
+												- q.signals[smiDayIndex - (smifunctionDaysDiff + smiDaysBack)]));
 
 										smiDayIndex++;
 

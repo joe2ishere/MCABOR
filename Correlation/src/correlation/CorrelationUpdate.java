@@ -30,7 +30,7 @@ public class CorrelationUpdate {
 	TreeMap<String, TopAndBottomList> tops = new TreeMap<>();
 
 	int volumeLimit = 10000;
-	int entryLimit = 1900;
+	int entryLimit = 1500;
 
 	public CorrelationUpdate(Connection conn) throws Exception {
 		System.out.println(updateSymbol == null ? "Updating all symbols" : "partial update");

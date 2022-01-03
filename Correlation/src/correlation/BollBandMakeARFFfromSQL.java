@@ -6,8 +6,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.logging.LogManager;
@@ -65,6 +63,7 @@ public class BollBandMakeARFFfromSQL {
 	public void makeARFFFromSQL(String sym, String dos) throws Exception {
 
 		boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
+		BBParms bbp = new BBParms();
 		Core core = new Core();
 		Connection conn = null;
 
@@ -79,11 +78,6 @@ public class BollBandMakeARFFfromSQL {
 		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
 		String startDate = gsd.inDate[50];
 
-		TreeMap<String, Object> bbs = new TreeMap<>();
-		TreeMap<String, Integer> bbfunctionDaysDiff = new TreeMap<>();
-		TreeMap<String, Integer> doubleBacks = new TreeMap<>();
-
-		TreeMap<String, String[]> bbDates = new TreeMap<>();
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
@@ -122,13 +116,16 @@ public class BollBandMakeARFFfromSQL {
 			bbData.add(outRealMiddleBand);
 			bbData.add(outRealLowerBand);
 
-			bbs.put(symKey, bbData);
-			bbfunctionDaysDiff.put(symKey, rs.getInt("functionDaysDiff"));
-			doubleBacks.put(symKey, rs.getInt("doubleBack"));
+			bbp.addSymbol(symKey);
+			bbp.setBBs(symKey, bbData);
+			bbp.setDoubleBacks(symKey, rs.getInt("doubleBack"));
+			bbp.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
+			bbp.setAttrDates(symKey, BollBandsGSD.inDate);
+
 			pw.println("@ATTRIBUTE " + symKey + "bbMiddle1 NUMERIC");
 			pw.println("@ATTRIBUTE " + symKey + "bbMiddle2 NUMERIC");
-			// pw.println("@ATTRIBUTE " + symKey + "bbMiddle3 NUMERIC");
-			bbDates.put(symKey, BollBandsGSD.inDate);
+			pw.println("@ATTRIBUTE " + symKey + "bbMiddle3 NUMERIC");
+
 		}
 
 		if (withAttributePosition)
@@ -138,75 +135,17 @@ public class BollBandMakeARFFfromSQL {
 
 		pw.println("@DATA");
 
-		int arraypos[] = new int[bbs.size()];
 		int pos = 50;
-		 
+
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 
-		int attributePos = -1;
-		eemindexLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut - 1;) {
-			String posDate = gsd.inDate[iday];
-			pos = 0;
-			for (String key : bbs.keySet()) {
-				String sdate = bbDates.get(key)[arraypos[pos]];
-				int dcomp = posDate.compareTo(sdate);
-				if (dcomp < 0) {
-					iday++;
-					continue eemindexLoop;
-				}
-				if (dcomp > 0) {
-					arraypos[pos]++;
-					continue eemindexLoop;
-				}
-				pos++;
-			}
+		for (int iday = pos; iday < gsd.inDate.length - daysOut - 1; iday++) {
 
-			pos = 0;
-			for (String key : bbs.keySet()) {
-				int giDay = iday - bbfunctionDaysDiff.get(key);
-				int siDay = arraypos[pos] - bbfunctionDaysDiff.get(key);
-
-				for (int i = 0; i < (bbfunctionDaysDiff.get(key) + daysOut); i++) {
-					String gtest = gsd.inDate[giDay + i];
-					String stest = bbDates.get(key)[siDay + i];
-					if (gtest.compareTo(stest) != 0) {
-						iday++;
-						continue eemindexLoop;
-					}
-				}
-				pos++;
-			}
-			Date now = sdf.parse(posDate);
-
-			Calendar cdMove = Calendar.getInstance();
-			cdMove.setTime(now);
-			int idt = 1;
-			int daysOutCalc = 0;
-			while (true) {
-				cdMove.add(Calendar.DAY_OF_MONTH, +1);
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY)
-					continue;
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY)
-					continue;
-				daysOutCalc++;
-				idt++;
-				if (idt > daysOut)
-					break;
-			}
-			String endDate = gsd.inDate[iday + daysOut];
-			if (daysOutCalc != daysOut)
-				System.out.println(posDate + " here " + endDate + " by " + daysOutCalc + " not " + daysOut);
-
-//			MACDMakeARFFfromCorrelationFile.printAttributeData(iday, daysOut, pw, bbs, bbfunctionDaysDiff, arraypos, gsd.inClose,
-//					bavg, savg);
-			printAttributeData(iday, daysOut, pw, bbs, bbfunctionDaysDiff, doubleBacks, arraypos, gsd.inClose, db,
-					withAttributePosition);
-			dateAttribute.put(gsd.inDate[iday], ++attributePos);
-			iday++;
-			for (pos = 0; pos < arraypos.length; pos++) {
-				arraypos[pos]++;
-			}
+			StringBuffer sb = printAttributeData(iday, gsd.inDate, daysOut, bbp, gsd.inClose, db, withAttributePosition,
+					false);
+			if (sb != null)
+				pw.print(sb.toString());
 
 		}
 
@@ -217,36 +156,58 @@ public class BollBandMakeARFFfromSQL {
 
 	public String getAttributeText(ArrayList<double[]> bbData, int bbfunctionDaysDiff, int bbstart, int doubleBack) {
 		return (bbData.get(1)[bbstart - (doubleBack)] - bbData.get(1)[bbstart - (bbfunctionDaysDiff + doubleBack)])
-				+ "," + (bbData.get(1)[bbstart - (doubleBack) - 1]
+				+ ","
+				+ (bbData.get(1)[bbstart - (doubleBack) - 1]
 						- bbData.get(1)[bbstart - (bbfunctionDaysDiff + doubleBack)] - 1)
-//				+ "," + (bbData.get(1)[bbstart - (doubleBack) - 2]
-//						- bbData.get(1)[bbstart - (bbfunctionDaysDiff + doubleBack)] - 2)
+				+ "," + (bbData.get(1)[bbstart - (doubleBack) - 2]
+						- bbData.get(1)[bbstart - (bbfunctionDaysDiff + doubleBack)] - 2)
 				+ ",";
 
 	}
 
-	public void printAttributeData(int iday, int daysOut, PrintWriter pw, TreeMap<String, Object> bbs,
-			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
-			double[] closes, DeltaBands priceBands, boolean withAttributePosition) {
-		int pos = 0;
-		for (String key : bbs.keySet()) {
+	public StringBuffer printAttributeData(int iday, String etfDates[], int daysOut, BBParms bbp, double[] closes,
+			DeltaBands priceBands, boolean withAttributePosition, boolean forLastUseQuestionMark) {
+		StringBuffer returnBuffer = new StringBuffer(1000);
 
-			ArrayList<double[]> bbData = (ArrayList<double[]>) bbs.get(key);
-			int bbfunctionDaysDiff = functionDaysDiffMap.get(key);
-			int bbstart = arraypos[pos];
-			Integer doubleBack = doubleBacks.get(key);
+		for (String key : bbp.keySet()) {
+			String dates[] = bbp.getAttrDates(key);
+			int bbstart = bbp.getLastDateStart(key);
+			for (; bbstart < dates.length; bbstart++) {
+				if (dates[bbstart].compareTo(etfDates[iday]) == 0)
+					break;
+				if (dates[bbstart].compareTo(etfDates[iday]) > 0)
+					return null;
+			}
+			int bbfunctionDaysDiff = bbp.getDaysDiff(key);
+			Integer doubleBack = bbp.getDoubleBacks(key);
+			// are we missing any days in between
+			int giDay = iday - bbfunctionDaysDiff;
+			int siDay = bbstart - bbfunctionDaysDiff;
+			// are we missing any days in between
+			for (int i = 0; i < (bbfunctionDaysDiff + daysOut); i++) {
+				String gtest = etfDates[giDay + i];
+				String stest = dates[siDay + i];
+				if (gtest.compareTo(stest) != 0) {
+					return null;
+				}
+			}
+			bbp.setLastDateStart(key, bbstart);
+			ArrayList<double[]> bbData = bbp.getBBs(key);
+
 			if (doubleBack == null)
 				doubleBack = 0;
-
-			pw.print(getAttributeText(bbData, bbfunctionDaysDiff, bbstart, doubleBack.intValue()));
-
-			pos++;
+			returnBuffer.append(getAttributeText(bbData, bbfunctionDaysDiff, bbstart, doubleBack.intValue()));
 
 		}
-		if (withAttributePosition)
-			pw.println(priceBands.getAttributePosition(iday, daysOut, closes));
+		if (forLastUseQuestionMark)
+			returnBuffer.append("?");
+		else if (withAttributePosition)
+			returnBuffer.append(priceBands.getAttributePosition(iday, daysOut, closes));
 		else
-			pw.println(priceBands.getAttributeValue(iday, daysOut, closes));
+			returnBuffer.append(priceBands.getAttributeValue(iday, daysOut, closes));
+
+		returnBuffer.append("\n");
+		return returnBuffer;
 	}
 
 }

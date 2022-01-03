@@ -13,7 +13,7 @@ import com.tictactec.ta.lib.MAType;
 import bands.DeltaBands;
 import movingAvgAndLines.MovingAvgAndLineIntercept;
 import weka.classifiers.Classifier;
-import weka.classifiers.trees.RandomForest;
+import weka.classifiers.lazy.KStar;
 import weka.core.Instances;
 
 public class MALinesCorrelationEstimator extends CorrelationEstimator {
@@ -93,7 +93,7 @@ public class MALinesCorrelationEstimator extends CorrelationEstimator {
 			double[] inClose, DeltaBands priceBands) {
 		try {
 			makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, arraypos, inClose, processDate, priceBands,
-					true);
+					false);
 		} catch (Exception e) {
 
 			e.printStackTrace();
@@ -117,7 +117,7 @@ public class MALinesCorrelationEstimator extends CorrelationEstimator {
 
 	@Override
 	public double drun(Instances instances) throws Exception {
-		Classifier classifier = new RandomForest();
+		Classifier classifier = new KStar();
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
 

@@ -14,6 +14,7 @@ import bands.DeltaBands;
 import util.Realign;
 import weka.classifiers.Classifier;
 import weka.classifiers.lazy.IBk;
+import weka.classifiers.lazy.KStar;
 import weka.classifiers.trees.RandomForest;
 import weka.core.EuclideanDistance;
 import weka.core.Instances;
@@ -40,14 +41,9 @@ public class DMICorrelationEstimator extends CorrelationEstimator {
 
 	@Override
 	public double drun(Instances instances) throws Exception {
-		IBk classifier = new IBk();
+		Classifier classifier = new KStar();
 		thisClassifier = classifier;
-		/*
-		 * classifier.setKNN(2); classifier.setCrossValidate(true);
-		 * classifier.setMeanSquared(true); classifier.buildClassifier(instances);
-		 * 
-		 */
-		classifier.setOptions(new String[] { "-K", "2" });
+
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
 
@@ -111,7 +107,7 @@ public class DMICorrelationEstimator extends CorrelationEstimator {
 			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
 			double[] inClose, DeltaBands priceBands) {
 		makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, functionDaysDiffMap, doubleBacks, arraypos, inClose,
-				priceBands, true);
+				priceBands, false);
 
 	}
 

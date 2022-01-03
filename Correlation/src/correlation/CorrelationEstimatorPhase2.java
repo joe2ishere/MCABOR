@@ -15,14 +15,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -49,11 +47,10 @@ import bands.DeltaBands;
 import util.Averager;
 import util.getDatabaseConnection;
 import utils.TopAndBottomList;
-import weka.classifiers.Classifier;
 import weka.classifiers.functions.LinearRegression;
 import weka.core.Instances;
 
-public abstract class CorrelationEstimator implements Runnable {
+public abstract class CorrelationEstimatorPhase2 implements Runnable {
 	static DecimalFormat df = new DecimalFormat("#.00");
 	static DecimalFormat df4 = new DecimalFormat("#.####");
 
@@ -61,8 +58,6 @@ public abstract class CorrelationEstimator implements Runnable {
 	static ArrayList<String> S5 = new ArrayList<>();
 	static ArrayList<String> B10 = new ArrayList<>();
 	static ArrayList<String> S10 = new ArrayList<>();
-	static ArrayList<String> B15 = new ArrayList<>();
-	static ArrayList<String> S15 = new ArrayList<>();
 	static TreeMap<String, GetETFDataUsingSQL> gsds = new TreeMap<>();
 	static ArrayList<String> primaryETFs = new ArrayList<String>();
 
@@ -97,12 +92,14 @@ public abstract class CorrelationEstimator implements Runnable {
 	Averager bestHigh = new Averager();
 	Averager worstLow = new Averager();
 
-	static boolean doingElite = false;
+	static boolean eliteMode = false;
+	static boolean one80Mode = false;
+	static ArrayList<String> one80ETFs = new ArrayList<String>();
 
 	String processDate;
 
 	public void setDoElite() {
-		doingElite = true;
+		eliteMode = true;
 	}
 
 	public static void loadGSDSTable(Connection conn) throws Exception {
@@ -134,48 +131,51 @@ public abstract class CorrelationEstimator implements Runnable {
 	}
 
 	public static void main(String args[]) throws Exception {
-		if (args.length > 0) {
-			if (args[0].startsWith("-debug"))
-				debugging = true;
-			else if (args[0].startsWith("-auto"))
-				debugging = false;
-			else {
-				System.out.println("you need to pass -debug or -auto ");
-				return;
-			}
-		} else {
-			System.out.println("you need to pass -debug or -auto ");
-			InputStreamReader isr = new InputStreamReader(System.in);
-			BufferedReader br = new BufferedReader(isr);
-			while (true) {
-				System.out.println("(D)ebug or (A)uto");
-				String debugAuto = br.readLine() + " ";
-				if (debugAuto.startsWith("D")) {
+		if (one80Mode)
+			debugging = true;
+		else {
+			if (args.length > 0) {
+				if (args[0].startsWith("-debug"))
 					debugging = true;
-					System.out.println("(F)ast or (S)low");
-					String debugFastOrSlow = br.readLine() + " ";
-					if (debugFastOrSlow.startsWith("F")) {
-						debuggingFast = true;
+				else if (args[0].startsWith("-auto"))
+					debugging = false;
+				else {
+					System.out.println("you need to pass -debug or -auto ");
+					return;
+				}
+			} else {
+				System.out.println("you need to pass -debug or -auto ");
+				InputStreamReader isr = new InputStreamReader(System.in);
+				BufferedReader br = new BufferedReader(isr);
+				while (true) {
+					System.out.println("(D)ebug or (A)uto");
+					String debugAuto = br.readLine() + " ";
+					if (debugAuto.startsWith("D")) {
+						debugging = true;
+						System.out.println("(F)ast or (S)low");
+						String debugFastOrSlow = br.readLine() + " ";
+						if (debugFastOrSlow.startsWith("F")) {
+							debuggingFast = true;
+							break;
+						}
 						break;
 					}
-					break;
+
+					if (debugAuto.startsWith("A")) {
+						debugging = false;
+						break;
+					}
+					java.awt.Toolkit.getDefaultToolkit().beep();
 				}
 
-				if (debugAuto.startsWith("A")) {
-					debugging = false;
-					break;
-				}
-				java.awt.Toolkit.getDefaultToolkit().beep();
 			}
-
 		}
-
 		LogManager.getLogManager().reset();
 
 		if (debugging)
 			functionDayAverager = CorrelationFunctionPerformance.loadFromFile();
 		else
-			functionDayAverager = CorrelationFunctionPerformance.getFunctionDayAverage("");
+			functionDayAverager = CorrelationFunctionPerformance.getFunctionDayAverage("_debug");
 
 		Connection conn = getDatabaseConnection.makeConnection();
 		final PreparedStatement stGetDate = conn
@@ -201,14 +201,14 @@ public abstract class CorrelationEstimator implements Runnable {
 
 		}
 		resultsForDBFile = new File("c:/users/joe/correlationOutput/resultsForFunctionTest_" + currentMktDate
-				+ (debugging ? "Debug" : "") + ".csv");
+				+ (debugging ? "Debug" : "") + "Phase2.csv");
 
 		resultsForDBPrintWriter = new PrintWriter(resultsForDBFile);
 
 		PrintWriter averageOutPW = new PrintWriter(
-				"c:/users/joe/correlationOutput/" + currentMktDate + (debugging ? "Debug" : "") + ".csv");
+				"c:/users/joe/correlationOutput/" + currentMktDate + (debugging ? "Debug" : "") + "Phase2.csv");
 		File rawDataCSVFile = new File(
-				"c:/users/joe/correlationOutput/rawData" + currentMktDate + (debugging ? "Debug" : "") + ".csv");
+				"c:/users/joe/correlationOutput/rawData" + currentMktDate + (debugging ? "Debug" : "") + "Phase2.csv");
 		PrintWriter rawDataCSVPW = new PrintWriter(rawDataCSVFile);
 
 		File estimatedPriceCSVFile = new File("c:/users/joe/correlationOutput/estimatedPrices" + currentMktDate
@@ -227,13 +227,12 @@ public abstract class CorrelationEstimator implements Runnable {
 		ArrayList<String> datesApart = null;
 		TreeMap<String, String> day5 = new TreeMap<>();
 		TreeMap<String, String> day10 = new TreeMap<>();
-		TreeMap<String, String> day15 = new TreeMap<>();
 		loadGSDSTable(conn);
-		for (String sym : gsds.keySet()) {
+		for (String sym : primaryETFs) {
 			GetETFDataUsingSQL gsd = gsds.get(sym);
-			double[] symavg = new double[31];
+			double[] symavg = new double[one80Mode ? 181 : 31];
 			symbolDailyAverages.put(sym, symavg);
-			if (datesApart == null) {
+			if (datesApart == null & one80Mode == false) {
 				datesApart = new ArrayList<>();
 				for (int i = 5; i <= 30; i += 5) {
 					datesApart.add(gsd.inDate[gsd.inDate.length - (i + 1)]);
@@ -259,7 +258,7 @@ public abstract class CorrelationEstimator implements Runnable {
 				.prepareStatement("select symbol, category from etfcategory order by symbol");
 
 		ResultSet rsCategory = selectCategory.executeQuery();
-		while (rsCategory.next()) {
+		while (rsCategory.next() & one80Mode == false) {
 			String sym = rsCategory.getString(1).trim();
 			String cat = rsCategory.getString(2).trim();
 			if (cat.length() == 0)
@@ -275,8 +274,13 @@ public abstract class CorrelationEstimator implements Runnable {
 			catList.append(sym + " ");
 		}
 
-		final PreparedStatement selectDays = conn
-				.prepareStatement("select distinct toCloseDays from tsf_correlation" + "  order by toCloseDays");
+		PreparedStatement selectDays;
+		if (one80Mode)
+			selectDays = conn.prepareStatement(
+					"select distinct toCloseDays from tsf_correlation_180" + "  order by toCloseDays");
+		else
+			selectDays = conn
+					.prepareStatement("select distinct toCloseDays from tsf_correlation" + "  order by toCloseDays");
 		ResultSet rsSelectDays = selectDays.executeQuery();
 		ArrayList<Integer> daysOutList = new ArrayList<Integer>();
 		System.out.print("Daily symbol");
@@ -288,27 +292,48 @@ public abstract class CorrelationEstimator implements Runnable {
 			int day = rsSelectDays.getInt(1);
 			daysOutList.add(day);
 			System.out.print(";D.O. " + day);
-			averageOutPW.print(";D. " + day);
-			rawDataCSVPW.print(";D. " + day);
-			estimatedPriceCSVPW.print(";D. " + day);
-			dailyHighlyFavored.put(day, new Favored("", -1.));
-			dailyLeastFavored.put(day, new Favored("", 99.));
+			if (one80Mode == false) {
+				averageOutPW.print(";D. " + day);
+				rawDataCSVPW.print(";D. " + day);
+				estimatedPriceCSVPW.print(";D. " + day);
+				dailyHighlyFavored.put(day, new Favored("", -1.));
+				dailyLeastFavored.put(day, new Favored("", 99.));
+			}
 
 		}
-		System.out.println(";Avg. 1-5; Avg. 6-10; Avg. 11-15;Avg. 16-20; Avg. 21-25; Avg. 26-30;Avg.");
-		averageOutPW.println(";Avg. 1-5; Avg. 6-10; Avg. 11-15;Avg. 16-20; Avg. 21-25; Avg. 26-30;Avg.");
-		rawDataCSVPW.println();
-		estimatedPriceCSVPW.println();
+		if (one80Mode == false) {
+			System.out.println(";Avg. 1-5; Avg. 6-10; Avg. 11-15;Avg. 16-20; Avg. 21-25; Avg. 26-30;Avg.");
+			averageOutPW.println(";Avg. 1-5; Avg. 6-10; Avg. 11-15;Avg. 16-20; Avg. 21-25; Avg. 26-30;Avg.");
+			rawDataCSVPW.println();
+			estimatedPriceCSVPW.println();
+		} else {
+			System.out.println();
+			PreparedStatement ps180 = conn
+					.prepareStatement("select distinct symbol from dmi_correlation_180 order by symbol");
+			ResultSet rs180 = ps180.executeQuery();
+			while (rs180.next()) {
+				one80ETFs.add(rs180.getString(1));
+			}
+			rs180.close();
+		}
 
-		ArrayList<CorrelationEstimator> estimators = new ArrayList<>();
 		// TODO set estimators
-		estimators.add(new DMICorrelationEstimator(conn));
-		estimators.add(new MACDCorrelationEstimator(conn));
-		estimators.add(new MAAveragerCorrelationEstimator(conn));
-		estimators.add(new MALinesCorrelationEstimator(conn));
-		estimators.add(new SMICorrelationEstimator(conn));
-		estimators.add(new TSFCorrelationEstimator(conn));
+		ArrayList<CorrelationEstimatorPhase2> estimators = new ArrayList<>();
+		if (!one80Mode) {
+			estimators.add(new DMICorrelationEstimatorPhase2(conn));
+			estimators.add(new MAAveragerCorrelationEstimatorPhase2(conn));
+			estimators.add(new MACDCorrelationEstimatorPhase2(conn));
+			estimators.add(new MALinesCorrelationEstimatorPhase2(conn));
+			estimators.add(new SMICorrelationEstimatorPhase2(conn));
+			estimators.add(new TSFCorrelationEstimatorPhase2(conn));
+		} else {
+			estimators.add(new DMICorrelationEstimatorPhase2(conn, one80Mode));
+			estimators.add(new MACDCorrelationEstimatorPhase2(conn, one80Mode));
+			estimators.add(new SMICorrelationEstimatorPhase2(conn, one80Mode));
+			estimators.add(new TSFCorrelationEstimatorPhase2(conn, one80Mode));
+		}
 		// TODO set estimators
+
 		StringBuffer etfExpectations = new StringBuffer(1000);
 		StringBuffer etfExpectationsAbridged = new StringBuffer(1000);
 
@@ -316,10 +341,10 @@ public abstract class CorrelationEstimator implements Runnable {
 
 		for (String sym : primaryETFs) {
 
-//			if (sym.compareTo("boil") < 0)
-//				continue;
+			if (one80Mode)
+				if (one80ETFs.contains(sym) == false)
+					continue;
 			if (debugging) {
-
 				if (debuggingFast) {
 
 					PreparedStatement selectCategoryBySybmolforDebug = conn
@@ -360,14 +385,13 @@ public abstract class CorrelationEstimator implements Runnable {
 			TreeMap<String, Double> theBadness = new TreeMap<>();
 
 			for (int daysOut : daysOutList) {
-//				if (daysOut != 11)
-//					continue;
 				DeltaBands priceBands = new DeltaBands(gsds.get(sym).inClose, daysOut);
 
 				avgForDaysOut.put(daysOut, new Averager());
 
 				ArrayList<Thread> threads = new ArrayList<>();
-				for (CorrelationEstimator ce : estimators) {
+
+				for (CorrelationEstimatorPhase2 ce : estimators) {
 					ce.setWork(sym, daysOut, priceBands, avgForDaysOut, theBadness);
 					Thread th = new Thread(ce);
 					threads.add(th);
@@ -378,9 +402,9 @@ public abstract class CorrelationEstimator implements Runnable {
 					th.join();
 				}
 			}
+			if (one80Mode == false) {
+				for (int daysOut : daysOutList) {
 
-			for (int daysOut : daysOutList) {
-				try {
 					String badnessFileName = "c:/users/joe/correlationARFF/bad/" + sym + "_" + daysOut
 							+ "_allbad_correlation.arff";
 					StringBuffer sb = new StringBuffer(1000);
@@ -406,556 +430,557 @@ public abstract class CorrelationEstimator implements Runnable {
 					double got = classifier.classifyInstance(instances.get(instances.size() - 1));
 					setResultsForDBForBadNess(got, sym, daysOut);
 					avgForDaysOut.get(daysOut).add(got, daysOut / 5);
-				} catch (Exception e) {
-					System.out.println(e.getLocalizedMessage());
-					System.out.println("continuing");
-				}
+
 //				// daysOut / 5 is a weight that shows that
 //				// the lower dates are less effective and the higher dates are much more
 //				// effective
 
+				}
 			}
-
-			double savg[] = new double[31];
-			/* if (one80Mode == false) */ {
+			double savg[] = new double[one80Mode ? 181 : 31];
+			if (one80Mode == false) {
 				estimatedPriceCSVPW.print(";" + df.format(gsds.get(sym).inClose[gsds.get(sym).inClose.length - 1]));
 			}
 			for (Integer key : avgForDaysOut.keySet()) {
 				double theAvg = avgForDaysOut.get(key).get();
-				System.out.print(";" + df.format(theAvg));
-				averageOutPW.print(";" + df.format(theAvg));
-				rawDataCSVPW.print(";" + df.format(theAvg));
-				DeltaBands priceBands = new DeltaBands(gsds.get(sym).inClose, key);
-				estimatedPriceCSVPW.print(";" + df.format(gsds.get(sym).inClose[gsds.get(sym).inClose.length - 1]
-						* (1. + priceBands.getApproximiateValue(theAvg))));
-				savg[key] = theAvg;
-				etfExpectations.append(formatPDFCell(theAvg));
-				sqlBuffer.append(df4.format(theAvg) + ";");
-				if (catAvg != null) {
-					Averager avg = catAvg.get(key);
-					if (avg == null) {
-						avg = new Averager();
-						catAvg.put(key, avg);
+				if (theAvg < 0.)
+					theAvg = 0.;
+				if (theAvg > 9.)
+					theAvg = 9.;
+				if (one80Mode) {
+					DeltaBands priceBands = new DeltaBands(gsds.get(sym).inClose, key);
+
+					System.out.print(";" + df.format(gsds.get(sym).inClose[gsds.get(sym).inClose.length - 1]
+							* (1. + priceBands.getApproximiateValue(theAvg))));
+				} else
+
+					System.out.print(";" + df.format(theAvg));
+				if (one80Mode == false) {
+					averageOutPW.print(";" + df.format(theAvg));
+					rawDataCSVPW.print(";" + df.format(theAvg));
+					DeltaBands priceBands = new DeltaBands(gsds.get(sym).inClose, key);
+					estimatedPriceCSVPW.print(";" + df.format(gsds.get(sym).inClose[gsds.get(sym).inClose.length - 1]
+							* (1. + priceBands.getApproximiateValue(theAvg))));
+					savg[key] = theAvg;
+					etfExpectations.append(formatPDFCell(theAvg));
+					sqlBuffer.append(df4.format(theAvg) + ";");
+					if (catAvg != null) {
+						Averager avg = catAvg.get(key);
+						if (avg == null) {
+							avg = new Averager();
+							catAvg.put(key, avg);
+						}
+						avg.add(theAvg);
 					}
-					avg.add(theAvg);
+					Favored fav = dailyHighlyFavored.get(key);
+					if (fav.getValue() < theAvg)
+						fav.setSymbolValue(sym, theAvg);
+					else if (fav.getValue() == theAvg)
+						fav.addSymbol(sym);
+					fav = dailyLeastFavored.get(key);
+					if (fav.getValue() > theAvg)
+						fav.setSymbolValue(sym, theAvg);
+					else if (fav.getValue() == theAvg)
+						fav.addSymbol(sym);
 				}
-				Favored fav = dailyHighlyFavored.get(key);
-				if (fav.getValue() < theAvg)
-					fav.setSymbolValue(sym, theAvg);
-				else if (fav.getValue() == theAvg)
-					fav.addSymbol(sym);
-				fav = dailyLeastFavored.get(key);
-				if (fav.getValue() > theAvg)
-					fav.setSymbolValue(sym, theAvg);
-				else if (fav.getValue() == theAvg)
-					fav.addSymbol(sym);
 			}
+			StringBuffer webSiteReportSB = null;
+			StringBuffer etfExpectationReportWaitForBuyOrSell = null;
+			if (one80Mode == false) {
+				symbolDailyAverages.put(sym, savg);
 
-			symbolDailyAverages.put(sym, savg);
+				webSiteReportSB = new StringBuffer("<tr><td>" + sym + "</td>");
+				etfExpectationReportWaitForBuyOrSell = new StringBuffer(pdfStartRowWithThinBorder);
+				etfExpectationReportWaitForBuyOrSell.append(pdfSymbolCell.replace("%s", sym));
 
-			StringBuffer webSiteReportSB = new StringBuffer("<tr><td>" + sym + "</td>");
-			StringBuffer etfExpectationReportWaitForBuyOrSell = new StringBuffer(pdfStartRowWithThinBorder);
-			etfExpectationReportWaitForBuyOrSell.append(pdfSymbolCell.replace("%s", sym));
+				psInsertToSQL.setString(2, sqlBuffer.toString());
+				psInsertToSQL.setString(3, sqlBuffer.toString());
+				if (debugging) {
+					System.out.println("debugging, so psInsertToSQL is not run.");
+				} else {
+					psInsertToSQL.execute();
+				}
 
-			psInsertToSQL.setString(2, sqlBuffer.toString());
-			psInsertToSQL.setString(3, sqlBuffer.toString());
-			if (debugging) {
-				System.out.println("debugging, so psInsertToSQL is not run.");
-			} else {
-				psInsertToSQL.execute();
 			}
-
-			double averages[] = new double[30];
+			double averages[] = new double[one80Mode ? 180 : 30];
 			for (Integer daysOut : avgForDaysOut.keySet()) {
 				averages[daysOut - 1] = avgForDaysOut.get(daysOut).get();
 			}
 			boolean buySellWrittenToWebPage = false;
 			Averager avverager = new Averager();
-			for (int daysOut = 4, tdc = 1; daysOut <= 29; daysOut += 5, tdc++) {
+			if (one80Mode == false)
+				for (int daysOut = 4, tdc = 1; daysOut <= (one80Mode ? 179 : 29); daysOut += 5, tdc++) {
 
-				Averager outAvg = new Averager();
-				for (int daysBack = 0; daysBack <= 4; daysBack++) {
-					outAvg.add(averages[daysOut - (4 - daysBack)], (daysBack + 1) * (daysBack + 1));
-				}
-
-				avverager.add(outAvg.get());
-				System.out.print(";" + df.format(outAvg.get()));
-				averageOutPW.print(";" + df.format(outAvg.get()));
-
-				webSiteReportSB.append("td" + tdc);
-
-				etfExpectations.append(formatPDFCell(outAvg.get()));
-
-				if (outAvg.get() > buyIndicatorLimit) {
-
-					webSiteReportSB.append("B");
-					buySellWrittenToWebPage = true;
-					String forAbridged = pdfDataCell.replace("%c", "green");
-					etfExpectationReportWaitForBuyOrSell.append(forAbridged.replace("%s", "Bullish"));
-
-					{
-						if (daysOut == 4) {
-							if (doneList.contains(sym) == false) {
-								B5.add(sym);
-								day5.put(sym, "Bullish");
-							}
-							doneList.add(sym);
-
-						} else if (daysOut == 9 & B5.contains(sym) == false & S5.contains(sym) == false) {
-							if (doneList.contains(sym) == false & B5.contains(sym) == false) {
-								B10.add(sym);
-								day10.put(sym, "Bullish");
-							}
-							doneList.add(sym);
-
-						} else if (daysOut == 14 & B5.contains(sym) == false & S5.contains(sym) == false
-								& B10.contains(sym) == false & S10.contains(sym) == false) {
-							if (doneList.contains(sym) == false & B5.contains(sym) == false
-									& B10.contains(sym) == false) {
-								B15.add(sym);
-								day15.put(sym, "Bullish");
-							}
-							doneList.add(sym);
-
-						}
-					}
-				} else if (outAvg.get() < sellIndicatorLimit) {
-
-					webSiteReportSB.append("S");
-					buySellWrittenToWebPage = true;
-					String forAbridged = pdfDataCell.replace("%c", "red");
-					etfExpectationReportWaitForBuyOrSell.append(forAbridged.replace("%s", "Bearish"));
-
-					{
-						if (daysOut == 4) {
-							if (doneList.contains(sym) == false) {
-								S5.add(sym);
-								day5.put(sym, "Bearish");
-							}
-							doneList.add(sym);
-
-						} else if (daysOut == 9 & B5.contains(sym) == false & S5.contains(sym) == false) {
-							if (doneList.contains(sym) == false & S5.contains(sym) == false) {
-								S10.add(sym);
-								day10.put(sym, "Bearish");
-							}
-							doneList.add(sym);
-
-						} else if (daysOut == 14 & B5.contains(sym) == false & S5.contains(sym) == false
-								& B10.contains(sym) == false & S10.contains(sym) == false) {
-							if (doneList.contains(sym) == false & S5.contains(sym) == false
-									& S10.contains(sym) == false) {
-								S15.add(sym);
-								day15.put(sym, "Bearish");
-							}
-							doneList.add(sym);
-
-						}
+					Averager outAvg = new Averager();
+					for (int daysBack = 0; daysBack <= 4; daysBack++) {
+						outAvg.add(averages[daysOut - (4 - daysBack)], (daysBack + 1) * (daysBack + 1));
 					}
 
-				} else {
-					webSiteReportSB.append("-");
-					String forAbridged = pdfDataCell.replace("%c", "white");
-					etfExpectationReportWaitForBuyOrSell.append(forAbridged.replace("%s", ""));
-				}
-			}
+					avverager.add(outAvg.get());
+					System.out.print(";" + df.format(outAvg.get()));
+					{
+						averageOutPW.print(";" + df.format(outAvg.get()));
 
-			webSiteReportSB.append("</tr>");
+						webSiteReportSB.append("td" + tdc);
+
+						etfExpectations.append(formatPDFCell(outAvg.get()));
+
+						if (outAvg.get() > buyIndicatorLimit) {
+
+							webSiteReportSB.append("B");
+							buySellWrittenToWebPage = true;
+							String forAbridged = pdfDataCell.replace("%c", "green");
+							etfExpectationReportWaitForBuyOrSell.append(forAbridged.replace("%s", "Bullish"));
+
+							{
+								if (daysOut == 4) {
+									if (doneList.contains(sym) == false) {
+										B5.add(sym);
+										day5.put(sym, "Bullish");
+									}
+									doneList.add(sym);
+
+								} else if (daysOut == 9 & B5.contains(sym) == false & S5.contains(sym) == false) {
+									if (doneList.contains(sym) == false & B5.contains(sym) == false) {
+										B10.add(sym);
+										day10.put(sym, "Bullish");
+									}
+									doneList.add(sym);
+
+								}
+							}
+
+						} else if (outAvg.get() < sellIndicatorLimit) {
+
+							webSiteReportSB.append("S");
+							buySellWrittenToWebPage = true;
+							String forAbridged = pdfDataCell.replace("%c", "red");
+							etfExpectationReportWaitForBuyOrSell.append(forAbridged.replace("%s", "Bearish"));
+
+							{
+								if (daysOut == 4) {
+									if (doneList.contains(sym) == false) {
+										S5.add(sym);
+										day5.put(sym, "Bearish");
+									}
+									doneList.add(sym);
+
+								} else if (daysOut == 9 & B5.contains(sym) == false & S5.contains(sym) == false) {
+									if (doneList.contains(sym) == false & S5.contains(sym) == false) {
+										S10.add(sym);
+										day10.put(sym, "Bearish");
+									}
+									doneList.add(sym);
+
+								}
+							}
+
+						} else {
+							webSiteReportSB.append("-");
+							String forAbridged = pdfDataCell.replace("%c", "white");
+							etfExpectationReportWaitForBuyOrSell.append(forAbridged.replace("%s", ""));
+						}
+					}
+				}
+
 			System.out.println(";" + df.format(avverager.get()/* + ";" + overAllAverageStrength.get() */));
-			averageOutPW.println(";" + df.format(avverager.get()/* + ";" + overAllAverageStrength.get() */));
-			rawDataCSVPW.println();
-			estimatedPriceCSVPW.println();
+			if (one80Mode == false) {
+				webSiteReportSB.append("</tr>");
+				averageOutPW.println(";" + df.format(avverager.get()/* + ";" + overAllAverageStrength.get() */));
+				rawDataCSVPW.println();
+				estimatedPriceCSVPW.println();
+				averageOutPW.flush();
+				rawDataCSVPW.flush();
+				estimatedPriceCSVPW.flush();
+				if (buySellWrittenToWebPage == true) {
+					rptOut.print(webSiteReportSB.toString());
+					rptOut.flush();
+					etfExpectationsAbridged.append(etfExpectationReportWaitForBuyOrSell.toString());
+					etfExpectationsAbridged.append(pdfEndRow);
+				}
 
-			averageOutPW.flush();
-			rawDataCSVPW.flush();
-			estimatedPriceCSVPW.flush();
-
-			if (buySellWrittenToWebPage == true) {
-				rptOut.print(webSiteReportSB.toString());
-				rptOut.flush();
-				etfExpectationsAbridged.append(etfExpectationReportWaitForBuyOrSell.toString());
-				etfExpectationsAbridged.append(pdfEndRow);
-			}
-
-			etfExpectations.append(formatPDFCell(avverager.get()));
-			etfExpectations.append(pdfEndRow);
+				etfExpectations.append(formatPDFCell(avverager.get()));
+				etfExpectations.append(pdfEndRow);
 //			for (String key : threadRunAverages.keySet()) {
 //				System.out.println(key + ";" + threadRunAverages.get(key).get());
 //			}
 //			System.exit(0);
-		}
-
-		// makeBestWorstDaily
-		StringBuffer bestDailyTop = new StringBuffer(1000);
-		StringBuffer bestDailyBottom = new StringBuffer(1000);
-		StringBuffer worstDailyTop = new StringBuffer(1000);
-		StringBuffer worstDailyBottom = new StringBuffer(1000);
-		bestDailyTop.append(pdfStartRowWithThinBorder);
-		bestDailyBottom.append(pdfStartRowWithThinBorder);
-		worstDailyTop.append(pdfStartRowWithThinBorder);
-		worstDailyBottom.append(pdfStartRowWithThinBorder);
-		for (Integer key : dailyHighlyFavored.keySet()) {
-			Favored fav = dailyHighlyFavored.get(key);
-			bestDailyTop.append(pdfSymbolCell.replace("%s", fav.symbol));
-			bestDailyBottom.append(formatPDFCell(fav.value));
-			fav = dailyLeastFavored.get(key);
-			worstDailyTop.append(pdfSymbolCell.replace("%s", fav.symbol));
-			worstDailyBottom.append(formatPDFCell(fav.value));
-		}
-		bestDailyTop.append(pdfEndRow);
-		bestDailyBottom.append(pdfEndRow);
-		worstDailyTop.append(pdfEndRow);
-		worstDailyBottom.append(pdfEndRow);
-		resultsForDBPrintWriter.flush();
-		resultsForDBPrintWriter.close();
-		updateResultsTable(conn, resultsForDBFile);
-
-		System.out.println();
-		averageOutPW.flush();
-		averageOutPW.close();
-		if (debugging) {
-			System.out.println("debugging, so insert into forecastReport  is not run.");
-		} else {
-			connRemote = getDatabaseConnection.makeMcVerryReportConnection();
-			PreparedStatement insertIntoRemoteReport102030 = connRemote
-					.prepareStatement("insert into forecastReport  (dateOfReport, rptAvailBy, currentReport,"
-							+ " 5DayResult, 10DayResult, 15DayResult,20DayResult, 25DayResult, 30DayResult)"
-							+ " values(?,?,?,'Not Available','Not Available','Not Available','Not Available','Not Available','Not Available' )"
-							+ " on duplicate key update currentReport=?");
-			insertIntoRemoteReport102030.setString(1, currentMktDate);
-			insertIntoRemoteReport102030.setString(2, ""); // getNextReportAvailableBy());
-			insertIntoRemoteReport102030.setString(3, rptSw.toString());
-			insertIntoRemoteReport102030.setString(4, rptSw.toString());
-
-			insertIntoRemoteReport102030.execute();
-		}
-
-		rptOut.flush();
-
-		StringBuffer sbCategoryReport = new StringBuffer(1000);
-		TreeMap<String, double[]> dCatAverages = new TreeMap<>();
-		Core core = new Core();
-
-		rawDataCSVPW.println();
-		rawDataCSVPW.println();
-		rawDataCSVPW.println();
-
-		for (String key : catAverages.keySet()) {
-			sbCategoryReport.append(pdfStartRowWithThinBorder);
-			sbCategoryReport.append(pdfSymbolCell.replace("%s", key));
-			rawDataCSVPW.print(key.replace("&amp;", "&") + ";");
-
-			TreeMap<Integer, Averager> catAverage = catAverages.get(key);
-			for (Integer dayout : catAverage.keySet()) {
-				Averager avg = catAverage.get(dayout);
-				sbCategoryReport.append(formatPDFCell(avg.get()));
-				rawDataCSVPW.print(String.format("%1.1f", avg.get()) + ";");
-
 			}
-			sbCategoryReport.append(pdfEndRow);
+		}
+		if (one80Mode == false) {
+			// makeBestWorstDaily
+			StringBuffer bestDailyTop = new StringBuffer(1000);
+			StringBuffer bestDailyBottom = new StringBuffer(1000);
+			StringBuffer worstDailyTop = new StringBuffer(1000);
+			StringBuffer worstDailyBottom = new StringBuffer(1000);
+			bestDailyTop.append(pdfStartRowWithThinBorder);
+			bestDailyBottom.append(pdfStartRowWithThinBorder);
+			worstDailyTop.append(pdfStartRowWithThinBorder);
+			worstDailyBottom.append(pdfStartRowWithThinBorder);
+			for (Integer key : dailyHighlyFavored.keySet()) {
+				Favored fav = dailyHighlyFavored.get(key);
+				bestDailyTop.append(pdfSymbolCell.replace("%s", fav.symbol));
+				bestDailyBottom.append(formatPDFCell(fav.value));
+				fav = dailyLeastFavored.get(key);
+				worstDailyTop.append(pdfSymbolCell.replace("%s", fav.symbol));
+				worstDailyBottom.append(formatPDFCell(fav.value));
+			}
+			bestDailyTop.append(pdfEndRow);
+			bestDailyBottom.append(pdfEndRow);
+			worstDailyTop.append(pdfEndRow);
+			worstDailyBottom.append(pdfEndRow);
+			resultsForDBPrintWriter.flush();
+			resultsForDBPrintWriter.close();
+			updateResultsTable(conn, resultsForDBFile);
+			System.out.println();
+			averageOutPW.flush();
+			averageOutPW.close();
+			if (debugging) {
+				System.out.println("debugging, so insert into forecastReport  is not run.");
+			} else {
+				connRemote = getDatabaseConnection.makeMcVerryReportConnection();
+				PreparedStatement insertIntoRemoteReport102030 = connRemote
+						.prepareStatement("insert into forecastReport  (dateOfReport, rptAvailBy, currentReport,"
+								+ " 5DayResult, 10DayResult, 15DayResult,20DayResult, 25DayResult, 30DayResult)"
+								+ " values(?,?,?,'Not Available','Not Available','Not Available','Not Available','Not Available','Not Available' )"
+								+ " on duplicate key update currentReport=?");
+				insertIntoRemoteReport102030.setString(1, currentMktDate);
+				insertIntoRemoteReport102030.setString(2, ""); // getNextReportAvailableBy());
+				insertIntoRemoteReport102030.setString(3, rptSw.toString());
+				insertIntoRemoteReport102030.setString(4, rptSw.toString());
+
+				insertIntoRemoteReport102030.execute();
+			}
+
+			rptOut.flush();
+
+			StringBuffer sbCategoryReport = new StringBuffer(1000);
+			TreeMap<String, double[]> dCatAverages = new TreeMap<>();
+			Core core = new Core();
+
+			rawDataCSVPW.println();
+			rawDataCSVPW.println();
 			rawDataCSVPW.println();
 
-		}
+			for (String key : catAverages.keySet()) {
+				sbCategoryReport.append(pdfStartRowWithThinBorder);
+				sbCategoryReport.append(pdfSymbolCell.replace("%s", key));
+				rawDataCSVPW.print(key.replace("&amp;", "&") + ";");
 
-		rawDataCSVPW.flush();
-		rawDataCSVPW.close();
-		rawDataCSVPW.flush();
-		rawDataCSVPW.close();
-
-		TopAndBottomList catOverallAverages = new TopAndBottomList();
-		for (String key : catAverages.keySet()) {
-			TreeMap<Integer, Averager> catAverage = catAverages.get(key);
-			Averager thisCatAverage = new Averager();
-			for (int lookAheadAverage = 1; lookAheadAverage <= 30; lookAheadAverage++) {
+				TreeMap<Integer, Averager> catAverage = catAverages.get(key);
 				for (Integer dayout : catAverage.keySet()) {
 					Averager avg = catAverage.get(dayout);
-					thisCatAverage.add(avg.get());
+					sbCategoryReport.append(formatPDFCell(avg.get()));
+					rawDataCSVPW.print(String.format("%1.1f", avg.get()) + ";");
+
 				}
+				sbCategoryReport.append(pdfEndRow);
+				rawDataCSVPW.println();
+
 			}
-			catOverallAverages.set(thisCatAverage.get(), key);
-		}
-		TopAndBottomList tabLookAhead = new TopAndBottomList();
-		for (int lookAheadAverage = 4; lookAheadAverage <= 10; lookAheadAverage++) {
-			if (lookAheadAverage == 5)
-				continue;
+
+			rawDataCSVPW.flush();
+			rawDataCSVPW.close();
+
+			TopAndBottomList catOverallAverages = new TopAndBottomList();
 			for (String key : catAverages.keySet()) {
 				TreeMap<Integer, Averager> catAverage = catAverages.get(key);
-				double tempCatAverage[] = new double[30];
-				for (Integer dayout : catAverage.keySet()) {
-					Averager avg = catAverage.get(dayout);
-					tempCatAverage[dayout - 1] = avg.get();
+				Averager thisCatAverage = new Averager();
+				for (int lookAheadAverage = 1; lookAheadAverage <= 30; lookAheadAverage++) {
+					for (Integer dayout : catAverage.keySet()) {
+						Averager avg = catAverage.get(dayout);
+						thisCatAverage.add(avg.get());
+					}
 				}
-				double dCatAverage[] = new double[30];
-				MInteger outBegIdx = new MInteger();
-				MInteger outNBElement = new MInteger();
-				core.ema(0, tempCatAverage.length - 1, tempCatAverage, lookAheadAverage, outBegIdx, outNBElement,
-						dCatAverage);
+				catOverallAverages.set(thisCatAverage.get(), key);
+			}
+			TopAndBottomList tabLookAhead = new TopAndBottomList();
+			for (int lookAheadAverage = 4; lookAheadAverage <= 10; lookAheadAverage++) {
+				if (lookAheadAverage == 5)
+					continue;
+				for (String key : catAverages.keySet()) {
+					TreeMap<Integer, Averager> catAverage = catAverages.get(key);
+					double tempCatAverage[] = new double[30];
+					for (Integer dayout : catAverage.keySet()) {
+						Averager avg = catAverage.get(dayout);
+						tempCatAverage[dayout - 1] = avg.get();
+					}
+					double dCatAverage[] = new double[30];
+					MInteger outBegIdx = new MInteger();
+					MInteger outNBElement = new MInteger();
+					core.ema(0, tempCatAverage.length - 1, tempCatAverage, lookAheadAverage, outBegIdx, outNBElement,
+							dCatAverage);
 
-				dCatAverages.put(key, dCatAverage);
+					dCatAverages.put(key, dCatAverage);
+				}
+
+				for (String key : dCatAverages.keySet()) {
+					double dCatAverage[] = dCatAverages.get(key);
+					for (int i = 0; i <= 30 - lookAheadAverage; i++) {
+						tabLookAhead.setTop(dCatAverage[i], key + "<" + (i + 1) + " to " + (i + lookAheadAverage));
+						tabLookAhead.setBottom(dCatAverage[i], key + "<" + (i + 1) + " to " + (i + lookAheadAverage));
+					}
+				}
+			}
+			StringBuffer emailText = new StringBuffer(1000);
+
+			if ((catOverallAverages.getTopValue(0) - 4.5) > (4.5 - catOverallAverages.getBottomValue(0))) {
+				topReport(true, emailText, catOverallAverages, tabLookAhead, catETFList);
+				bottomReport(false, emailText, catOverallAverages, tabLookAhead, catETFList);
+			} else {
+				bottomReport(true, emailText, catOverallAverages, tabLookAhead, catETFList);
+				topReport(false, emailText, catOverallAverages, tabLookAhead, catETFList);
 			}
 
-			for (String key : dCatAverages.keySet()) {
-				double dCatAverage[] = dCatAverages.get(key);
-				for (int i = 0; i <= 30 - lookAheadAverage; i++) {
-					tabLookAhead.setTop(dCatAverage[i], key + "<" + (i + 1) + " to " + (i + lookAheadAverage));
-					tabLookAhead.setBottom(dCatAverage[i], key + "<" + (i + 1) + " to " + (i + lookAheadAverage));
-				}
+			FileReader fr = new FileReader("xmlFilesForPDFReports/Report-FO.xml");
+			BufferedReader br = new BufferedReader(fr);
+			String in = "";
+			StringBuffer fsb = new StringBuffer(1000);
+			while ((in = br.readLine()) != null) {
+				fsb.append(in + "\n");
 			}
-		}
-		StringBuffer emailText = new StringBuffer(1000);
+			br.close();
 
-		if ((catOverallAverages.getTopValue(0) - 4.5) > (4.5 - catOverallAverages.getBottomValue(0))) {
-			topReport(true, emailText, catOverallAverages, tabLookAhead, catETFList);
-			bottomReport(false, emailText, catOverallAverages, tabLookAhead, catETFList);
-		} else {
-			bottomReport(true, emailText, catOverallAverages, tabLookAhead, catETFList);
-			topReport(false, emailText, catOverallAverages, tabLookAhead, catETFList);
-		}
+			String xmlText = fsb.toString().replace("<<<<MARKET DATE>>>>", currentMktDate);
+			if (etfExpectationsAbridged.length() < 2) {
+				etfExpectationsAbridged.append("<fo:table-row background-color='lightgrey' >");
+				etfExpectationsAbridged.append("<fo:table-cell><fo:block>No Data To Report</fo:block></fo:table-cell>");
+				etfExpectationsAbridged.append("</fo:table-row>");
+			}
+			xmlText = xmlText.replace("<<<<ABRIDGED REPORT>>>>", etfExpectationsAbridged.toString());
+			xmlText = xmlText.replace("<<<<CELL DATA>>>>", etfExpectations.toString());
 
-		FileReader fr = new FileReader("xmlFilesForPDFReports/Report-FO.xml");
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
-		StringBuffer fsb = new StringBuffer(1000);
-		while ((in = br.readLine()) != null) {
-			fsb.append(in + "\n");
-		}
-		br.close();
+			xmlText = xmlText.replace("<<<<BEST DAILY ETFS>>>>", bestDailyTop.toString() + bestDailyBottom.toString());
 
-		String xmlText = fsb.toString().replace("<<<<MARKET DATE>>>>", currentMktDate);
-		if (etfExpectationsAbridged.length() < 2) {
-			etfExpectationsAbridged.append("<fo:table-row background-color='lightgrey' >");
-			etfExpectationsAbridged.append("<fo:table-cell><fo:block>No Data To Report</fo:block></fo:table-cell>");
-			etfExpectationsAbridged.append("</fo:table-row>");
-		}
-		xmlText = xmlText.replace("<<<<ABRIDGED REPORT>>>>", etfExpectationsAbridged.toString());
-		xmlText = xmlText.replace("<<<<CELL DATA>>>>", etfExpectations.toString());
+			xmlText = xmlText.replace("<<<<WORST DAILY ETFS>>>>",
+					worstDailyTop.toString() + worstDailyBottom.toString());
 
-		xmlText = xmlText.replace("<<<<BEST DAILY ETFS>>>>", bestDailyTop.toString() + bestDailyBottom.toString());
+			xmlText = xmlText.replace("<<<<CATEGORY DATA>>>>", sbCategoryReport.toString());
+			xmlText = xmlText.replace("<<<<COPYRIGHT YEAR>>>>", currentMktDate.substring(0, 4));
 
-		xmlText = xmlText.replace("<<<<WORST DAILY ETFS>>>>", worstDailyTop.toString() + worstDailyBottom.toString());
+			connRemote = getDatabaseConnection.makeMcVerryReportConnection();
+			String historyForPDF = doHistory(connRemote, datesApart, currentMktDate);
+			xmlText = xmlText.replace("<<<<HISTORY PDF REPORT>>>>", historyForPDF);
 
-		xmlText = xmlText.replace("<<<<CATEGORY DATA>>>>", sbCategoryReport.toString());
-		xmlText = xmlText.replace("<<<<COPYRIGHT YEAR>>>>", currentMktDate.substring(0, 4));
+			StringBuffer catETFsb = new StringBuffer(1000);
+			for (String key : catETFList.keySet()) {
+				catETFsb.append("<fo:table-row>");
+				catETFsb.append(
+						"<fo:table-cell  text-align='center' border='solid 0.05mm black'><fo:block font-size='11pt'>");
+				catETFsb.append(key);
+				catETFsb.append("</fo:block></fo:table-cell>");
+				catETFsb.append(
+						"<fo:table-cell  text-align='center' border='solid 0.05mm black'><fo:block font-size='12pt' text-align='left'>");
+				catETFsb.append(catETFList.get(key).toString());
+				catETFsb.append("</fo:block></fo:table-cell>");
+				catETFsb.append("</fo:table-row>");
+			}
+			xmlText = xmlText.replace("<<<<CATEGORY LIST DATA>>>>", catETFsb.toString());
+			PrintWriter pxml = new PrintWriter("temp.xml");
+			pxml.print(xmlText);
+			pxml.flush();
+			pxml.close();
 
-		connRemote = getDatabaseConnection.makeMcVerryReportConnection();
-		String historyForPDF = doHistory(connRemote, datesApart, currentMktDate);
-		xmlText = xmlText.replace("<<<<HISTORY PDF REPORT>>>>", historyForPDF);
+			String pdfReportName = PDFReport
+					.makeReport(new ByteArrayInputStream(xmlText.getBytes(StandardCharsets.UTF_8)), currentMktDate);
+			String performanceReportName = PerformanceFromDBForPDF.makeReport(currentMktDate);
 
-		StringBuffer catETFsb = new StringBuffer(1000);
-		for (String key : catETFList.keySet()) {
-			catETFsb.append("<fo:table-row>");
-			catETFsb.append(
-					"<fo:table-cell  text-align='center' border='solid 0.05mm black'><fo:block font-size='11pt'>");
-			catETFsb.append(key);
-			catETFsb.append("</fo:block></fo:table-cell>");
-			catETFsb.append(
-					"<fo:table-cell  text-align='center' border='solid 0.05mm black'><fo:block font-size='12pt' text-align='left'>");
-			catETFsb.append(catETFList.get(key).toString());
-			catETFsb.append("</fo:block></fo:table-cell>");
-			catETFsb.append("</fo:table-row>");
-		}
-		xmlText = xmlText.replace("<<<<CATEGORY LIST DATA>>>>", catETFsb.toString());
-		PrintWriter pxml = new PrintWriter("temp.xml");
-		pxml.print(xmlText);
-		pxml.flush();
-		pxml.close();
+			if (!debugging)
+				try {
 
-		String pdfReportName = PDFReport.makeReport(new ByteArrayInputStream(xmlText.getBytes(StandardCharsets.UTF_8)),
-				currentMktDate);
-		String performanceReportName = PerformanceFromDBForPDF.makeReport(currentMktDate);
+					FTPClient ftpc = new FTPClient();
+					ftpc.connect("mcverryreport.com");
 
-		if (!debugging)
-			try {
+					ftpc.login("reportly@mcverryreport.com", "*gg77_3*g168");
 
-				FTPClient ftpc = new FTPClient();
-				ftpc.connect("mcverryreport.com");
+					ftpc.setControlKeepAliveTimeout(300);
+					ftpc.enterLocalPassiveMode();
+					ftpc.setFileType(FTP.BINARY_FILE_TYPE);
+					ftpc.setFileTransferMode(FTP.BINARY_FILE_TYPE);
 
-				ftpc.login("reportly@mcverryreport.com", "*gg77_3*g168");
-
-				ftpc.setControlKeepAliveTimeout(300);
-				ftpc.enterLocalPassiveMode();
-				ftpc.setFileType(FTP.BINARY_FILE_TYPE);
-				ftpc.setFileTransferMode(FTP.BINARY_FILE_TYPE);
-
-				ftpc.storeFile("subscribe/reportPerformance.pdf", new FileInputStream(performanceReportName));
-				File oldreportfile = new File(
-						"c:/users/joe/correlationOutput/ETFExpectations_" + updateOldFileDate + ".pdf");
-				if (oldreportfile.exists())
-					ftpc.storeFile("subscribe/SampleReport.pdf", new FileInputStream(oldreportfile));
-				else {
-					System.out.println("Did not store " + oldreportfile.getName()
-							+ " file not found; will try shorttermtraderreport");
-					oldreportfile = new File(
-							"c:/users/joe/correlationOutput/ShortTermTraderReport_" + updateOldFileDate + ".pdf");
+					ftpc.storeFile("subscribe/reportPerformance.pdf", new FileInputStream(performanceReportName));
+					File oldreportfile = new File(
+							"c:/users/joe/correlationOutput/ETFExpectations_" + updateOldFileDate + "Phase2.pdf");
 					if (oldreportfile.exists())
 						ftpc.storeFile("subscribe/SampleReport.pdf", new FileInputStream(oldreportfile));
 					else {
-						System.out.println(
-								"Did not store " + oldreportfile.getName() + " as SampleRerport.pdf - file not found.");
+						System.out.println("Did not store " + oldreportfile.getName()
+								+ " file not found; will try shorttermtraderreport");
+						oldreportfile = new File("c:/users/joe/correlationOutput/ShortTermTraderReport_"
+								+ updateOldFileDate + "Phase2.pdf");
+						if (oldreportfile.exists())
+							ftpc.storeFile("subscribe/SampleReport.pdf", new FileInputStream(oldreportfile));
+						else {
+							System.out.println("Did not store " + oldreportfile.getName()
+									+ " as SampleRerport.pdf - file not found.");
+						}
+
 					}
 
+					ftpc.disconnect();
+
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
 
-				ftpc.disconnect();
+			PDFMergerUtility merger = new PDFMergerUtility();
+			String pdfBothReportName = "c:/users/joe/correlationOutput/etfExpectations_" + currentMktDate
+					+ "Phase2.pdf";
+			merger.setDestinationFileName(pdfBothReportName);
+			merger.addSource(new File(pdfReportName));
+			merger.addSource(new File(performanceReportName));
 
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			merger.mergeDocuments(MemoryUsageSetting.setupMainMemoryOnly());
+			boolean lastDayOfWeek = isTodayLastDayOfWeek();
+			Logger logr = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+			String logFileName = String
+					.format("c:/users/joe/correlationOutput/mailOut-log." + currentMktDate + "Phase2.txt");
 
-		PDFMergerUtility merger = new PDFMergerUtility();
-		String pdfBothReportName = "c:/users/joe/correlationOutput/etfExpectations_" + currentMktDate + ".pdf";
-		merger.setDestinationFileName(pdfBothReportName);
-		merger.addSource(new File(pdfReportName));
-		merger.addSource(new File(performanceReportName));
+			FileHandler handler = new FileHandler(logFileName, true);
+			handler.setFormatter(new SimpleFormatter());
+			logr.addHandler(handler);
+			logr.setLevel(Level.ALL);
 
-		merger.mergeDocuments(MemoryUsageSetting.setupMainMemoryOnly());
-		boolean lastDayOfWeek = isTodayLastDayOfWeek();
-		Logger logr = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
-		String logFileName = String.format("c:/users/joe/correlationOutput/mailOut-log." + currentMktDate + ".txt");
+			if (!debugging) {
 
-		FileHandler handler = new FileHandler(logFileName, true);
-		handler.setFormatter(new SimpleFormatter());
-		logr.addHandler(handler);
-		logr.setLevel(Level.ALL);
+				connRemote = getDatabaseConnection.makeMcVerryReportConnection();
+				PreparedStatement psmail = connRemote.prepareStatement(
+						"select email, type, count, idx from subscribers where status = 'Active' and count > 0");
+				PreparedStatement updatemail = connRemote
+						.prepareStatement("update subscribers set count = count - 1, lastSent = ? where idx = ? ");
+				ResultSet rsmail = psmail.executeQuery();
 
-		if (!debugging) {
+				while (rsmail.next()) {
 
-			connRemote = getDatabaseConnection.makeMcVerryReportConnection();
-			PreparedStatement psmail = connRemote.prepareStatement(
-					"select email, type, count, idx from subscribers where status = 'Active' and count > 0");
-			PreparedStatement updatemail = connRemote
-					.prepareStatement("update subscribers set count = count - 1, lastSent = ? where idx = ? ");
-			ResultSet rsmail = psmail.executeQuery();
+					String emailid = rsmail.getString("email").trim();
+					String type = rsmail.getString("type").trim();
+					int cnt = rsmail.getInt("count") - 1;
+					int idx = rsmail.getInt("idx");
+					if (type.endsWith("End of Week") & lastDayOfWeek == false)
+						continue;
+					HtmlEmail eml = new HtmlEmail();
+					System.out.println("report send to: " + emailid + " type: " + type + " count:" + cnt);
+					eml.addTo(emailid);
 
-			while (rsmail.next()) {
-				// MultiPartEmail eml = new MultiPartEmail();
-				String emailid = rsmail.getString("email").trim();
-				String type = rsmail.getString("type").trim();
-				int cnt = rsmail.getInt("count") - 1;
-				int idx = rsmail.getInt("idx");
-				if (type.endsWith("End of Week") & lastDayOfWeek == false)
-					continue;
-				HtmlEmail eml = new HtmlEmail();
-				System.out.println("report send to: " + emailid + " type: " + type + " count:" + cnt);
-				eml.addTo(emailid);
+					logr.info(emailid + ": setup ");
+					eml.setSubject("ETF Expectations for " + currentMktDate);
+					eml.setFrom("support@mcverryreport.com");
+					StringBuffer htmlMsg = new StringBuffer("<html><body>");
+					if (type.startsWith("Compli")) {
 
-				logr.info(emailid + ": setup ");
-				eml.setSubject("ETF Expectations for " + currentMktDate);
-				eml.setFrom("support@mcverryreport.com");
-				StringBuffer htmlMsg = new StringBuffer("<html><body>");
-				if (type.startsWith("Compli")) {
+						htmlMsg.append(" This is your complimentary copy of ETF Expectations for " + currentMktDate
+								+ ".<p>To begin your subscription use the following link "
+								+ "<br> https://mcverryreport.com/subscriptionRequest.html </p> ");
 
-					htmlMsg.append(" This is your complimentary copy of ETF Expectations for " + currentMktDate
-							+ ".<p>To begin your subscription use the following link "
-							+ "<br> https://mcverryreport.com/subscriptionRequest.html </p> ");
-
-				} else {
-					htmlMsg.append("<h2>ETF Expectations for " + currentMktDate + "</h2>");
-				}
+					} else {
+						htmlMsg.append("<h2>ETF Expectations for " + currentMktDate + "</h2>");
+					}
 //				if (rsmail.getString(1).contains("usacoder") | rsmail.getString(1).contains("j.mcverry")) {
 //				htmlMsg.append(
 //						"<h3>I apologize for the duplicate email.  The \"5 Day Period Best Buy/Sell Indications\""
 //								+ " report had several missing elements.  I squashed the bug that "
 //								+ "caused the error.  </h3></p>");
 
-				if (emailText.length() < 10) {
-					htmlMsg.append("<h5>Since there are no significant data factors, there will be no "
-							+ "quick sector analysis this evening. </h5>");
+					if (type.endsWith("Daily"))
 
-				} else {
-					htmlMsg.append("<h3>Here is a quick analysis of the sectors. </h3>");
-					htmlMsg.append(emailText.toString());
+						htmlMsg.append("<h3>A new section has been added to the report. The best and worst "
+								+ " ETF picks for each of the next 30 days now appear before the 30 Day Estimates. </h3>");
+
+					if (emailText.length() < 10) {
+						htmlMsg.append("<h5>Since there are no significant data factors, there will be no "
+								+ "quick sector analysis this evening. </h5>");
+
+					} else {
+						htmlMsg.append("<h3>Here is a quick analysis of the sectors. </h3>");
+						htmlMsg.append(emailText.toString());
+					} // }
+					if (type.endsWith("Daily"))
+						htmlMsg.append("<h5>Included with this email is a CSV file. "
+								+ "The file contains estimated closing prices "
+								+ "for the next 30 days for each of the ETFs I track. </h5><p/>");
+					htmlMsg.append("<p>Your subscription count is now at " + cnt);
+					htmlMsg.append("</body></html>");
+					eml.setHtmlMsg(htmlMsg.toString());
+					EmailAttachment attachment = new EmailAttachment();
+					attachment.setPath(pdfBothReportName);
+					attachment.setDisposition(EmailAttachment.ATTACHMENT);
+					eml.attach(attachment);
+					if (type.endsWith("Daily")) {
+						EmailAttachment attachment2 = new EmailAttachment();
+						attachment2.setPath(estimatedPriceCSVFile.getPath());
+						attachment2.setDisposition(EmailAttachment.ATTACHMENT);
+						eml.attach(attachment2);
+					}
+					eml.setHostName("mcverryreport.com");
+					eml.setSmtpPort(465);
+					eml.setSSL(true);
+					eml.setAuthentication("subscriptions@mcverryreport.com", "n4rlyW00D$");
+					String emlret = eml.send();
+					logr.info(rsmail.getString(1) + ":" + emlret);
+					updatemail.setString(1, currentMktDate);
+					updatemail.setInt(2, idx);
+					updatemail.execute();
+
 				}
-//				}
+			} else {
+				HtmlEmail eml = new HtmlEmail();
+				eml.addTo("j.mcverry@americancoders.com");
+				eml.addTo("usacoder@icloud.com");
+				eml.setSubject("Reports ala debug mode");
+				eml.setFrom("support@mcverryreport.com");
 
-				if (type.endsWith("Daily"))
-					htmlMsg.append("<h5>Included with this email is a CSV file. "
-							+ "The file contains estimated closing prices "
-							+ "for the next 30 days for each of the ETFs I track. </h5><p/>");
+				StringBuffer htmlMsg = new StringBuffer("<html><body>");
+				htmlMsg.append("<h2>ETF Expectations for " + currentMktDate + "</h2>");
 
-				htmlMsg.append("<p>Your subscription count is now at " + cnt);
-
+				htmlMsg.append("<h3>Here is a quick analysis of the sectors. </h3>");
+				htmlMsg.append(emailText.toString());
 				htmlMsg.append("</body></html>");
 				eml.setHtmlMsg(htmlMsg.toString());
+
 				EmailAttachment attachment = new EmailAttachment();
-				attachment.setPath(pdfBothReportName);
+				attachment.setPath(pdfReportName);
 				attachment.setDisposition(EmailAttachment.ATTACHMENT);
 				eml.attach(attachment);
-				if (type.endsWith("Daily")) {
-					EmailAttachment attachment2 = new EmailAttachment();
-					attachment2.setPath(estimatedPriceCSVFile.getPath());
-					attachment2.setDisposition(EmailAttachment.ATTACHMENT);
-					eml.attach(attachment2);
-				}
+				EmailAttachment attachment2 = new EmailAttachment();
+				attachment2.setPath(performanceReportName);
+				attachment2.setDisposition(EmailAttachment.ATTACHMENT);
+				eml.attach(attachment2);
+				EmailAttachment attachment3 = new EmailAttachment();
+				attachment3.setPath(rawDataCSVFile.getPath());
+				attachment3.setDisposition(EmailAttachment.ATTACHMENT);
+				eml.attach(attachment3);
+				EmailAttachment attachment4 = new EmailAttachment();
+				attachment4.setPath(estimatedPriceCSVFile.getPath());
+				attachment4.setDisposition(EmailAttachment.ATTACHMENT);
+				eml.attach(attachment4);
 				eml.setHostName("mcverryreport.com");
 				eml.setSmtpPort(465);
 				eml.setSSL(true);
 				eml.setAuthentication("subscriptions@mcverryreport.com", "n4rlyW00D$");
 				String emlret = eml.send();
-				logr.info(rsmail.getString(1) + ":" + emlret);
-				updatemail.setString(1, currentMktDate);
-				updatemail.setInt(2, idx);
-				updatemail.execute();
-
+				logr.info("debugging on; sent to j.mcverry@americancoders.com:" + emlret);
 			}
-		} else {
-			HtmlEmail eml = new HtmlEmail();
-			eml.addTo("j.mcverry@americancoders.com");
-//			eml.addTo("usacoder@icloud.com");
-			eml.setSubject("Reports");
-			eml.setFrom("support@mcverryreport.com");
 
-			StringBuffer htmlMsg = new StringBuffer("<html><body>");
-			htmlMsg.append("<h2>ETF Expectations for " + currentMktDate + "</h2>");
+			//
 
-			htmlMsg.append("<h3>Here is a quick analysis of the sectors. </h3>");
-			htmlMsg.append(emailText.toString());
-			htmlMsg.append("</body></html>");
-			eml.setHtmlMsg(htmlMsg.toString());
+			/*
+			 * webPageUpdate(currentMktDate); ReportForStockTwits rfst = new
+			 * ReportForStockTwits(); rfst.get(day5, day10);
+			 */
+			PrintWriter pwThreadAvg = new PrintWriter(
+					"c:/users/joe/correlationOutput/threadRunAverages_" + currentMktDate + "Phase2.csv");
+			for (String key : threadRunAverages.keySet()) {
+				pwThreadAvg.println(key + ";" + threadRunAverages.get(key).get());
+			}
+			pwThreadAvg.flush();
+			pwThreadAvg.close();
 
-			EmailAttachment attachment = new EmailAttachment();
-			attachment.setPath(pdfReportName);
-			attachment.setDisposition(EmailAttachment.ATTACHMENT);
-			eml.attach(attachment);
-			EmailAttachment attachment2 = new EmailAttachment();
-			attachment2.setPath(performanceReportName);
-			attachment2.setDisposition(EmailAttachment.ATTACHMENT);
-			eml.attach(attachment2);
-			EmailAttachment attachment3 = new EmailAttachment();
-			attachment3.setPath(rawDataCSVFile.getPath());
-			attachment3.setDisposition(EmailAttachment.ATTACHMENT);
-			eml.attach(attachment3);
-			EmailAttachment attachment4 = new EmailAttachment();
-			attachment4.setPath(estimatedPriceCSVFile.getPath());
-			attachment4.setDisposition(EmailAttachment.ATTACHMENT);
-			eml.attach(attachment4);
-			eml.setHostName("mcverryreport.com");
-			eml.setSmtpPort(465);
-			eml.setSSL(true);
-			eml.setAuthentication("subscriptions@mcverryreport.com", "n4rlyW00D$");
-			String emlret = eml.send();
-			logr.info("debugging on; sent to j.mcverry@americancoders.com:" + emlret);
+			/*
+			 * PreparedStatement makeAcctInactive = connRemote
+			 * .prepareStatement("update subscribers set status = 'Inactive' where status = 'Active' and count < 1"
+			 * ); makeAcctInactive.execute();
+			 */
 		}
-
-		webPageUpdate(currentMktDate);
-
-		if (debugging == false) {
-			ReportForStockTwits rfst = new ReportForStockTwits();
-			rfst.get(day5, day10, day15);
-		}
-
-		PrintWriter pwThreadAvg = new PrintWriter("c:/users/joe/correlationOutput/threadRunAverages_"
-				+ (debugging ? "Debug" : "") + currentMktDate + ".csv");
-		for (String key : threadRunAverages.keySet()) {
-			pwThreadAvg.println(key + ";" + threadRunAverages.get(key).get());
-		}
-		pwThreadAvg.flush();
-		pwThreadAvg.close();
-
-		PreparedStatement makeAcctInactive = connRemote
-				.prepareStatement("update subscribers set status = 'Inactive' where status = 'Active' and count < 1");
-		makeAcctInactive.execute();
-
 		estimatedPriceCSVPW.close();
 	}
 
@@ -1157,10 +1182,9 @@ public abstract class CorrelationEstimator implements Runnable {
 			int hx = dv.intValue();
 			rpl = String.format("#FF%02X%02X", hx, hx);
 		} else {
-			dv = 255 * ((9 - value) / 4.5);
+			dv = 255 * ((9. - value) / 4.5);
 			int hx = dv.intValue();
 			rpl = String.format("#%02XFF%02X", hx, hx);
-
 		}
 		String ret = pdfDataCell.replace("%c", rpl);
 
@@ -1175,7 +1199,7 @@ public abstract class CorrelationEstimator implements Runnable {
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-	public CorrelationEstimator(Connection conn) {
+	public CorrelationEstimatorPhase2(Connection conn) {
 		this.conn = conn;
 	}
 
@@ -1216,143 +1240,7 @@ public abstract class CorrelationEstimator implements Runnable {
 
 	}
 
-	public abstract void buildHeaders(PrintWriter pw) throws SQLException, Exception;
-
-	public abstract void printAttributeData(int iday, int daysOutCalc, PrintWriter pw,
-			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
-			double[] inClose, DeltaBands priceBands);
-
-	public String buildInstances() {
-
-		StringWriter sw = null;
-		PrintWriter pw = null;
-		sw = new StringWriter();
-		pw = new PrintWriter(sw);
-		pw.println("% 1. Title: " + sym + "_" + function + "_correlation");
-		pw.println("@RELATION " + sym);
-		int pos = 50;
-		GetETFDataUsingSQL gsd = gsds.get(sym);
-		startDate = gsd.inDate[pos];
-		try {
-			buildHeaders(pw);
-		} catch (Exception e1) {
-
-			e1.printStackTrace();
-			System.exit(0);
-			return null;
-		}
-
-		for (String key : dates.keySet()) {
-			String datess[] = dates.get(key);
-			if (datess[50].compareTo(startDate) > 0)
-				startDate = datess[50];
-		}
-
-//		pw.println("@ATTRIBUTE class NUMERIC");
-		pw.println("@ATTRIBUTE class {N1,N2,N3,N4,N5,P1,P2,P3,P4,P5}");
-
-//		pw.println(priceBands.getAttributeDefinition());
-
-		pw.println("@DATA");
-		pw.flush();
-		if (myParms.size() == 0)
-			return null;
-		int arraypos[] = new int[myParms.size()];
-		pos = 0;
-		arraypos[pos] = 0;
-//		boolean testCloseChange = gsd.inClose[gsd.inClose.length - 1] > gsd.inClose[gsd.inClose.length - 2];
-
-		while (gsd.inDate[pos].compareTo(startDate) < 0)
-			pos++;
-
-		eemindexLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut - 1;) {
-
-			String posDate = gsd.inDate[iday];
-			pos = 0;
-			for (String key : myParms.keySet()) {
-				String sdate = dates.get(key)[arraypos[pos]];
-				int dcomp = posDate.compareTo(sdate);
-				if (dcomp < 0) {
-					iday++;
-					continue eemindexLoop;
-				}
-				if (dcomp > 0) {
-					arraypos[pos]++;
-					continue eemindexLoop;
-				}
-				pos++;
-			}
-			pos = 0;
-			for (String key : myParms.keySet()) {
-				int giDay = iday - functionDaysDiffMap.get(key);
-				int siDay = arraypos[pos] - functionDaysDiffMap.get(key);
-
-				for (int i = 0; i < (functionDaysDiffMap.get(key) + daysOut); i++) {
-					String gtest = gsd.inDate[giDay + i];
-					String stest = dates.get(key)[siDay + i];
-					if (gtest.compareTo(stest) != 0) {
-						iday++;
-						continue eemindexLoop;
-					}
-				}
-				pos++;
-			}
-
-			Date now;
-			try {
-				now = sdf.parse(posDate);
-			} catch (ParseException e) {
-				e.printStackTrace();
-				System.exit(0);
-				return null;
-			}
-
-			Calendar cdMove = Calendar.getInstance();
-			cdMove.setTime(now);
-			int idt = 1;
-			int daysOutCalc = 0;
-			while (true) {
-				cdMove.add(Calendar.DAY_OF_MONTH, +1);
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY)
-					continue;
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY)
-					continue;
-				daysOutCalc++;
-				idt++;
-				if (idt > daysOut)
-					break;
-			}
-			String endDate = gsd.inDate[iday + daysOut];
-			if (daysOutCalc != daysOut)
-				System.out.println(posDate + " here " + endDate + " by " + daysOutCalc + " not " + daysOut);
-			processDate = gsd.inDate[iday];
-			printAttributeData(iday, daysOutCalc, pw, functionDaysDiffMap, doubleBacks, arraypos, gsd.inClose,
-					priceBands);
-			iday++;
-			for (pos = 0; pos < arraypos.length; pos++) {
-				arraypos[pos]++;
-			}
-
-		}
-		pos = 0;
-		for (String key : myParms.keySet()) {
-			Object myParm = myParms.get(key);
-			int functionDaysDiff = functionDaysDiffMap.get(key);
-			int start = dates.get(key).length - 1;
-			Integer doubleBack = doubleBacks.get(key);
-			if (doubleBack == null)
-				doubleBack = 0;
-			getAttributeText(pw, myParm, functionDaysDiff, start, doubleBack.intValue());
-
-			arraypos[pos]++;
-			pos++;
-
-		}
-
-		pw.println("?");
-		pw.flush();
-		return sw.toString();
-	}
+	public abstract String buildInstances();
 
 	static TreeMap<String, Averager> threadRunAverages = new TreeMap<>();
 
@@ -1367,8 +1255,7 @@ public abstract class CorrelationEstimator implements Runnable {
 //			pwI.print($instances);
 //			pwI.flush();
 //			pwI.close();
-//			System.exit(0);
-//		} catch (FileNotFoundException e1) {
+//		} catch (FileNotFoundException e1) {  
 //			e1.printStackTrace();
 //		}
 
@@ -1381,7 +1268,7 @@ public abstract class CorrelationEstimator implements Runnable {
 			instances.setClassIndex(instances.numAttributes() - 1);
 
 			double got;
-			if (doingElite) {
+			if (eliteMode) {
 				got = getBestClassifier(instances);
 				priceBands.getApproximiateValue(got);
 
@@ -1392,12 +1279,12 @@ public abstract class CorrelationEstimator implements Runnable {
 				got = drun(instances);
 
 			}
-			setResultsForDB(got);
 
 			if (Double.isNaN(got)) {
 				System.err.println("found a bad one ");
 				return;
 			}
+			setResultsForDB(got);
 
 			theBadness.put(function + ";" + daysOut, got);
 			synchronized (instances) {
@@ -1427,6 +1314,8 @@ public abstract class CorrelationEstimator implements Runnable {
 				avg = new Averager();
 				threadRunAverages.put(key, avg);
 			}
+			// System.out.println(1. * Duration.between(start, finish).toMillis());
+
 			avg.add(1. * Duration.between(start, finish).toMillis());
 		}
 
@@ -1471,9 +1360,6 @@ public abstract class CorrelationEstimator implements Runnable {
 
 	}
 
-	protected abstract void getAttributeText(PrintWriter pw, Object myParm, int functionDaysDiff2, int start,
-			int doubleBack);
-
 	public static void webPageUpdate(String lastMktDate) {
 		if (debugging) {
 			System.out.println("debugging, so web page is not updated.");
@@ -1492,7 +1378,7 @@ public abstract class CorrelationEstimator implements Runnable {
 		if (B5.isEmpty() == false | S5.isEmpty() == false)
 			pwWebPage.println("<hr width='50%'><div style='font-size:105%'>1 Week &mdash;" + " Latest Picks</div>");
 		if (B5.isEmpty() == false) {
-			pwWebPage.print(" Bullish:");
+			pwWebPage.print(" Buy:");
 			Iterator<String> iter = B5.iterator();
 
 			while (iter.hasNext()) {
@@ -1750,9 +1636,9 @@ public abstract class CorrelationEstimator implements Runnable {
 
 	public static void updateResultsTable(Connection conn, File resultsForDBFile2) throws Exception {
 
+		String debugAppend = "";
 		if (debugging) {
-			System.out.println("debugging, so updateResultsTable is not run.");
-			return;
+			debugAppend = "_debug";
 		}
 		BufferedReader br = new BufferedReader(new FileReader(resultsForDBFile2));
 		String in;
@@ -1760,9 +1646,9 @@ public abstract class CorrelationEstimator implements Runnable {
 		while ((in = br.readLine()) != null) {
 			String ins[] = in.split(";");
 
-			PreparedStatement updateFunctionResults = conn.prepareStatement(
-					"insert into correlationfunctionresults" + " (symbol, function, mktDate, daysOut, guess) "
-							+ " values(?,?,?,?,?) " + " on duplicate key update guess=? ");
+			PreparedStatement updateFunctionResults = conn.prepareStatement("insert into correlationfunctionresults"
+					+ debugAppend + " (symbol, function, mktDate, daysOut, guess) " + " values(?,?,?,?,?) "
+					+ " on duplicate key update guess=? ");
 			updateFunctionResults.setString(1, ins[0]);
 			updateFunctionResults.setString(2, ins[1]);
 			updateFunctionResults.setString(3, ins[2]);
@@ -1815,5 +1701,4 @@ public abstract class CorrelationEstimator implements Runnable {
 
 	}
 
-	public abstract Classifier getClassifier();
 }

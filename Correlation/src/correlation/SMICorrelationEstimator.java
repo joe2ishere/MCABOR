@@ -73,6 +73,10 @@ public class SMICorrelationEstimator extends CorrelationEstimator {
 			doubleBacks.put(symKey, rsSelect.getInt("doubleBack"));
 			pw.println("@ATTRIBUTE " + symKey + "smi NUMERIC");
 			pw.println("@ATTRIBUTE " + symKey + "signal NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "smi2 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "signal2 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "smi3 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "signal3 NUMERIC");
 			dates.put(symKey, pgsd.inDate);
 		}
 
@@ -83,7 +87,7 @@ public class SMICorrelationEstimator extends CorrelationEstimator {
 			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
 			double[] inClose, DeltaBands priceBands) {
 		makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, functionDaysDiffMap, doubleBacks, arraypos, inClose,
-				priceBands, true);
+				priceBands, false);
 
 	}
 
@@ -102,8 +106,6 @@ public class SMICorrelationEstimator extends CorrelationEstimator {
 	@Override
 	public double drun(Instances instances) throws Exception {
 		Classifier classifier = new IBk();
-		String args[] = { "-I" };
-		((IBk) classifier).setOptions(args);
 
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));

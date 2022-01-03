@@ -16,6 +16,7 @@ import correlation.DMIMakeARFFfromSQL;
 import correlation.MAAveragesMakeARFFfromSQL;
 import correlation.MACDMakeARFFfromSQL;
 import correlation.MALinesMakeARFFfromSQL;
+import correlation.SMMakeARFFfromSQL;
 import correlation.TSFMakeARFFfromSQL;
 import util.getDatabaseConnection;
 import weka.classifiers.Classifier;
@@ -117,6 +118,7 @@ public class TheyreAllBad implements Runnable {
 		pw.println("@ATTRIBUTE macd NUMERIC");
 		pw.println("@ATTRIBUTE mavg NUMERIC");
 		pw.println("@ATTRIBUTE mali NUMERIC");
+		pw.println("@ATTRIBUTE smi NUMERIC");
 		pw.println("@ATTRIBUTE tsf NUMERIC");
 		pw.println("@ATTRIBUTE class NUMERIC");
 
@@ -142,6 +144,11 @@ public class TheyreAllBad implements Runnable {
 		int maliClassPos = maliArff.getData().numAttributes() - 1;
 		maliArff.getData().setClassIndex(maliClassPos);
 
+		SMMakeARFFfromSQL smi = new SMMakeARFFfromSQL(true);
+		ArffReader smiArff = new ArffReader(new FileReader(smi.makeARFFFromSQL(sym, dos)));
+		int smiClassPos = smiArff.getData().numAttributes() - 1;
+		smiArff.getData().setClassIndex(smiClassPos);
+
 		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(true);
 		ArffReader tsfArff = new ArffReader(new FileReader(tsf.makeARFFFromSQL(sym, dos)));
 		int tsfClassPos = tsfArff.getData().numAttributes() - 1;
@@ -165,6 +172,10 @@ public class TheyreAllBad implements Runnable {
 			if (maliPos == null)
 				continue;
 
+			Integer smiPos = smi.dateAttribute.get(dt);
+			if (smiPos == null)
+				continue;
+
 			Integer tsfPos = tsf.dateAttribute.get(dt);
 			if (tsfPos == null)
 				continue;
@@ -181,16 +192,20 @@ public class TheyreAllBad implements Runnable {
 			Instance maliInst = maliArff.getData().get(maliPos.intValue());
 			double maliClassValue = maliInst.classValue();
 
+			Instance smiInst = smiArff.getData().get(smiPos.intValue());
+			double smiClassValue = smiInst.classValue();
+
 			Instance tsfInst = tsfArff.getData().get(tsfPos.intValue());
 			double tsfClassValue = tsfInst.classValue();
 
 			if (dmiClassValue != macdClassValue | dmiClassValue != mavgClassValue | dmiClassValue != maliClassValue
-					| dmiClassValue != tsfClassValue)
+					| dmiClassValue != smiClassValue | dmiClassValue != tsfClassValue)
 				System.out.println("logic error");
 			pw.print(doInstance(dmiArff.getData(), dmiInst) + ",");
 			pw.print(doInstance(macdArff.getData(), macdInst) + ",");
 			pw.print(doInstance(mavgArff.getData(), mavgInst) + ",");
 			pw.print(doInstance(maliArff.getData(), maliInst) + ",");
+			pw.print(doInstance(smiArff.getData(), smiInst) + ",");
 			pw.print(doInstance(tsfArff.getData(), tsfInst) + ",");
 			pw.println(dmiClassValue);
 			pw.flush();

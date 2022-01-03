@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -38,13 +39,17 @@ public class DoubleBackMACDCorrelation implements Runnable {
 
 	}
 
+	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 180 days
+	// if 180 days then just a limited number of etfs are done.
+	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld"));
+
 	public static void main(String[] args) throws Exception {
 
 		Connection conn = getDatabaseConnection.makeConnection();
 
 		CorrelationUpdate cu = new CorrelationUpdate(conn);
 
-		int threadCount = 3;
+		int threadCount = 5;
 		BlockingQueue<Queue> macdQue = new ArrayBlockingQueue<Queue>(threadCount);
 		DoubleBackMACDCorrelation corrs = new DoubleBackMACDCorrelation(macdQue, cu);
 		corrs.loadTables();
@@ -61,11 +66,11 @@ public class DoubleBackMACDCorrelation implements Runnable {
 			if (cu.symList.get(macdSym) < cu.entryLimit)
 				continue;
 			System.out.println("running " + macdSym);
-			for (int optInFastPeriod = 10; optInFastPeriod <= 16; optInFastPeriod += 1) {
-				for (int optInSlowPeriod = 9; optInSlowPeriod <= 15; optInSlowPeriod += 1) {
+			for (int optInFastPeriod = 5; optInFastPeriod <= 16; optInFastPeriod += 2) {
+				for (int optInSlowPeriod = 9; optInSlowPeriod <= 18; optInSlowPeriod += 2) {
 					if (optInSlowPeriod >= optInFastPeriod)
 						continue;
-					for (int optInSignalPeriod = 2; optInSignalPeriod <= 7; optInSignalPeriod += 1) {
+					for (int optInSignalPeriod = 2; optInSignalPeriod <= 4; optInSignalPeriod += 1) {
 
 						MInteger outBegIdx = new MInteger();
 						MInteger outNBElement = new MInteger();
@@ -120,8 +125,8 @@ public class DoubleBackMACDCorrelation implements Runnable {
 
 	}
 
-	File doneFile = new File("macdDoubleDone.txt");
-	public static File tabFile = new File("macdDoubleTaB.txt");
+	File doneFile = new File("macdDoubleDone" + (doingBigDayDiff ? "180Days" : "") + ".txt");
+	public static File tabFile = new File("macdDoubleTaB" + (doingBigDayDiff ? "180Days" : "") + ".txt");
 
 	public void loadTables() {
 
@@ -232,9 +237,13 @@ public class DoubleBackMACDCorrelation implements Runnable {
 					if (cu.updateSymbol != null)
 						if (cu.updateSymbol.contains(closingSymbol) == false)
 							continue;
-
+					if (doingBigDayDiff) {
+						if (bigDaysDiffList.contains(closingSymbol) == false)
+							continue;
+					}
 					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
-					nextDD: for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= 30; pricefunctionDaysDiff += 1) {
+					nextDD: for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 180
+							: 30); pricefunctionDaysDiff += 1) {
 
 						for (int smfunctionDaysDiff = 1; smfunctionDaysDiff <= 9; smfunctionDaysDiff += 2) {
 							{

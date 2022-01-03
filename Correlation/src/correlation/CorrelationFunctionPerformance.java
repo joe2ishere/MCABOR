@@ -3,7 +3,6 @@ package correlation;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,20 +19,24 @@ public class CorrelationFunctionPerformance {
 
 	public static void main(String[] args) throws Exception {
 
-		TreeMap<String, ArrayList<Averager>> functionDayAverager = getFunctionDayAverage();
-		DecimalFormat df = new DecimalFormat("#.##");
+		String withDebug[] = { "", "_debug" };
+		for (String d : withDebug) {
+			System.out.println(d);
+			TreeMap<String, ArrayList<Averager>> functionDayAverager = getFunctionDayAverage(d);
+			DecimalFormat df = new DecimalFormat("#.##");
 
-		for (String function : functionDayAverager.keySet()) {
-			ArrayList<Averager> averages = functionDayAverager.get(function);
-			System.out.print(function + ";");
-			for (int i = 1; i < averages.size(); i++) {
-				Averager average = averages.get(i);
-				if (average.getCount() > 1)
-					System.out.print(df.format(average.get()) /* + ";" + average.getCount() */);
-				System.out.print(";");
+			for (String function : functionDayAverager.keySet()) {
+				ArrayList<Averager> averages = functionDayAverager.get(function);
+				System.out.print(function + ";");
+				for (int i = 1; i < averages.size(); i++) {
+					Averager average = averages.get(i);
+					if (average.getCount() > 1)
+						System.out.print(df.format(average.get()) /* + ";" + average.getCount() */);
+					System.out.print(";");
+				}
+				System.out.println();
+
 			}
-			System.out.println();
-
 		}
 
 	}
@@ -61,19 +64,20 @@ public class CorrelationFunctionPerformance {
 		return functionDayAverager;
 	}
 
-	public static TreeMap<String, ArrayList<Averager>> getFunctionDayAverage() throws Exception {
+	public static TreeMap<String, ArrayList<Averager>> getFunctionDayAverage(String d) throws Exception {
 		Connection conn = getDatabaseConnection.makeConnection();
 
-		PreparedStatement selectLastDate = conn.prepareStatement(
-				"select distinct mktDate from correlationfunctionresults " + " order by mktDate desc limit 30");
+		PreparedStatement selectLastDate = conn
+				.prepareStatement("select distinct mktDate from correlationfunctionresults" + d + " "
+						+ " order by mktDate desc limit 30");
 		ResultSet dateRS = selectLastDate.executeQuery();
 		String latestDate = "";
 		while (dateRS.next()) {
 			latestDate = dateRS.getString(1);
 		}
 
-		PreparedStatement selectSymbols = conn
-				.prepareStatement("select distinct  symbol  from correlationfunctionresults  where mktDate >= ? and "
+		PreparedStatement selectSymbols = conn.prepareStatement(
+				"select distinct  symbol  from correlationfunctionresults" + d + "  where mktDate >= ? and "
 						+ " symbol in (select distinct symbol from tsf_correlation) order by symbol");
 		selectSymbols.setString(1, latestDate);
 		ResultSet rsSymbols = selectSymbols.executeQuery();
@@ -84,8 +88,8 @@ public class CorrelationFunctionPerformance {
 		rsSymbols.close();
 
 		PreparedStatement selectFunctions = conn
-				.prepareStatement("select distinct  function  from correlationfunctionresults  where mktDate >="
-						+ " ? order by function");
+				.prepareStatement("select distinct  function  from correlationfunctionresults" + d
+						+ "  where mktDate >=" + " ? order by function");
 		selectFunctions.setString(1, latestDate);
 		ResultSet rsFunctions = selectFunctions.executeQuery();
 		ArrayList<String> functions = new ArrayList<>();
@@ -102,8 +106,9 @@ public class CorrelationFunctionPerformance {
 		}
 		rsFunctions.close();
 
-		PreparedStatement selectMktDates = conn.prepareStatement(
-				"select distinct  mktDate, daysOut  from correlationfunctionresults where mktDate >= ? order by mktDate, daysOut asc");
+		PreparedStatement selectMktDates = conn
+				.prepareStatement("select distinct  mktDate, daysOut  from correlationfunctionresults" + d
+						+ " where mktDate >= ? order by mktDate, daysOut asc");
 		selectMktDates.setString(1, latestDate);
 		ResultSet rsMktDates = selectMktDates.executeQuery();
 
@@ -139,10 +144,9 @@ public class CorrelationFunctionPerformance {
 				boolean buy = gsd.inClose[dtPosition + daysOut] > gsd.inClose[dtPosition];
 				for (String function : functions) {
 					ArrayList<Averager> averages = functionDayAverager.get(function);
-					PreparedStatement getResults = conn
-							.prepareStatement("select guess from correlationfunctionresults where symbol = '" + sym
-									+ "' and " + " function = '" + function + "' and mktDate = '" + mktDate
-									+ "' and daysOut = " + daysOut);
+					PreparedStatement getResults = conn.prepareStatement("select guess from correlationfunctionresults"
+							+ d + " where symbol = '" + sym + "' and " + " function = '" + function
+							+ "' and mktDate = '" + mktDate + "' and daysOut = " + daysOut);
 
 					ResultSet rsResults = getResults.executeQuery();
 					if (rsResults.next() == false) {
@@ -174,16 +178,12 @@ public class CorrelationFunctionPerformance {
 		}
 		rsMktDates.close();
 
-		PrintWriter pw = new PrintWriter(filename);
-		for (String key : functionDayAverager.keySet()) {
-			pw.print(key);
-			for (Averager avg : functionDayAverager.get(key)) {
-				pw.print(";" + avg.getSum() + ";" + avg.getCount());
-			}
-			pw.println();
-		}
-		pw.flush();
-		pw.close();
+		/*
+		 * PrintWriter pw = new PrintWriter(filename); for (String key :
+		 * functionDayAverager.keySet()) { pw.print(key); for (Averager avg :
+		 * functionDayAverager.get(key)) { pw.print(";" + avg.getSum() + ";" +
+		 * avg.getCount()); } pw.println(); } pw.flush(); pw.close();
+		 */
 
 		return functionDayAverager;
 

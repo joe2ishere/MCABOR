@@ -14,6 +14,7 @@ import bands.DeltaBands;
 import util.Realign;
 import weka.classifiers.Classifier;
 import weka.classifiers.lazy.IBk;
+import weka.classifiers.lazy.KStar;
 import weka.classifiers.trees.RandomForest;
 import weka.core.EuclideanDistance;
 import weka.core.Instances;
@@ -41,7 +42,7 @@ public class TSFCorrelationEstimator extends CorrelationEstimator {
 	@Override
 	public double drun(Instances instances) throws Exception {
 
-		RandomForest classifier = new RandomForest();
+		Classifier classifier = new KStar();
 		thisClassifier = classifier;
 		classifier.buildClassifier(instances);
 		return classifier.classifyInstance(instances.get(instances.size() - 1));
@@ -66,7 +67,7 @@ public class TSFCorrelationEstimator extends CorrelationEstimator {
 					// pgsd = GetETFDataUsingSQL.getInstance(functionSymbol);
 					if (pgsd == null) {
 						System.err.println(
-								" *** " + this.function + " is missing data from function symbol =>" + functionSymbol);
+								" *** " + this.function + " is missing data fjrom function symbol =>" + functionSymbol);
 						continue nextFunctionSymbol;
 					}
 					gsds.put(functionSymbol, pgsd);
@@ -104,7 +105,7 @@ public class TSFCorrelationEstimator extends CorrelationEstimator {
 			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
 			double[] inClose, DeltaBands priceBands) {
 		makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, functionDaysDiffMap, doubleBacks, arraypos, inClose,
-				priceBands, true);
+				priceBands, false);
 
 	}
 

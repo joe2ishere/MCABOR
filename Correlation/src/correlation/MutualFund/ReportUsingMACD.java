@@ -25,7 +25,7 @@ import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
 import weka.core.Instances;
 
-public class MakeMFBuySellReportUsingMACD {
+public class ReportUsingMACD {
 
 	public static void main(String[] args) throws Exception {
 

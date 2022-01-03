@@ -22,6 +22,14 @@ import util.getDatabaseConnection;
 
 public class TSFMakeARFFfromSQL {
 
+	public class TSFSymbolParm {
+		Integer functionDaysDiff;
+		Integer doubleBacks;
+		double[] adxs;
+		String[] adxDates;
+		int lastDateStart;
+	}
+
 	boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
 
 	public TSFMakeARFFfromSQL(boolean b) {
@@ -157,7 +165,7 @@ public class TSFMakeARFFfromSQL {
 			for (String key : tsfs.keySet()) {
 				int giDay = iday - tsffunctionDaysDiff.get(key);
 				int siDay = arraypos[pos] - tsffunctionDaysDiff.get(key);
-
+				// are we missing any days in between
 				for (int i = 0; i < (tsffunctionDaysDiff.get(key) + daysOut); i++) {
 					String gtest = gsd.inDate[giDay + i];
 					String stest = tsfDates.get(key)[siDay + i];

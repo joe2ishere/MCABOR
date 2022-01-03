@@ -117,8 +117,8 @@ public class BBCorrelationEstimator extends CorrelationEstimator {
 	public void printAttributeData(int iday, int daysOutCalc, PrintWriter pw,
 			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
 			double[] inClose, DeltaBands priceBands) {
-		makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, functionDaysDiffMap, doubleBacks, arraypos, inClose,
-				priceBands, true);
+//		makeSQL.printAttributeData(iday, daysOutCalc, pw, myParms, functionDaysDiffMap, doubleBacks, arraypos, inClose,
+//				priceBands, true);
 
 	}
 
