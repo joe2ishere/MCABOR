@@ -144,12 +144,13 @@ public class TSFICorrelationMutualFunds implements Runnable {
 								ArrayList<String> dates = mfdates.get(closeSym);
 
 								{
-									for (int doubleBack = 0; doubleBack < 5; doubleBack++) {
+									for (int doubleBack = 1; doubleBack <= 5; doubleBack++) {
 										ArrayList<Double> ccArray1 = new ArrayList<Double>(),
 												ccArray2 = new ArrayList<Double>();
 
-										for (int pgsdDateIndex = 50, mfDateIndex = 50; pgsdDateIndex < pgsd.inDate.length
-												- priceDaysDiff & mfDateIndex < dates.size() - priceDaysDiff;) {
+										for (int pgsdDateIndex = 50,
+												mfDateIndex = 50; pgsdDateIndex < pgsd.inDate.length - priceDaysDiff
+														& mfDateIndex < dates.size() - priceDaysDiff;) {
 											int dateCompare = pgsd.inDate[pgsdDateIndex]
 													.compareTo(dates.get(mfDateIndex));
 											if (dateCompare < 0) {

@@ -2,14 +2,12 @@ package correlation;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Scanner;
-import java.util.TreeMap;
 import java.util.logging.LogManager;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
@@ -20,26 +18,19 @@ import bands.DeltaBands;
 import util.Realign;
 import util.getDatabaseConnection;
 
-public class TSFMakeARFFfromSQL {
-
-	public class TSFSymbolParm {
-		Integer functionDaysDiff;
-		Integer doubleBacks;
-		double[] adxs;
-		String[] adxDates;
-		int lastDateStart;
-	}
+public class TSFMakeARFFfromSQL extends AttributeMakerFromSQL {
 
 	boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
+	boolean makeWith30Days = true;
 
-	public TSFMakeARFFfromSQL(boolean b) {
+	public TSFMakeARFFfromSQL(boolean b, boolean makeWith30) {
 		withAttributePosition = b;
+		makeWith30Days = makeWith30;
 	}
 
 	public static void main(String[] args) throws Exception {
 
 		LogManager.getLogManager().reset();
-
 		Scanner sin = new Scanner(System.in);
 		String sym;
 		while (true) {
@@ -65,56 +56,41 @@ public class TSFMakeARFFfromSQL {
 			break;
 		}
 		sin.close();
-		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(false);
-		tsf.makeARFFFromSQL(sym, dos);
-	}
-
-	public String getFilename(String sym, String dos) {
-		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_tsf_correlation.arff";
-	}
-
-	public TreeMap<String, Integer> dateAttribute = new TreeMap<>();
-
-	public File makeARFFFromSQL(String sym, String dos) throws Exception {
-
-		Core core = new Core();
-		Connection conn = null;
-
-		conn = getDatabaseConnection.makeConnection();
-
-		PreparedStatement ps = conn
-				.prepareStatement("select * from tsf_correlation" + " where symbol=? and toCloseDays=?  ");
-
+		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(false, true);
+		Connection conn = getDatabaseConnection.makeConnection();
 		int daysOut = Integer.parseInt(dos);
+		AttributeParm parms = tsf.buildParameters(sym, daysOut, conn);
+		String data = tsf.makeARFFFromSQL(sym, daysOut, parms, false);
+		File file = new File(getFilename(sym, daysOut));
+		PrintWriter pw = new PrintWriter(file);
+		pw.print(data);
+		pw.flush();
+		pw.close();
 
-		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
-		String startDate = gsd.inDate[50];
+	}
 
-		TreeMap<String, double[]> tsfs = new TreeMap<>();
-		TreeMap<String, Integer> tsffunctionDaysDiff = new TreeMap<>();
-		TreeMap<String, Integer> doubleBacks = new TreeMap<>();
+	public static String getFilename(String sym, int dos) {
+		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_tsf2_correlation.arff";
+	}
 
-		TreeMap<String, String[]> tsfDates = new TreeMap<>();
+	@Override
+	public AttributeParm buildParameters(String sym, int daysOut, Connection conn) throws Exception {
+		Core core = new Core();
+		TSFParms parms = new TSFParms();
+		PreparedStatement ps = conn.prepareStatement("select * from tsf_correlation" + (makeWith30Days ? "" : "_130")
+				+ " where symbol=? and toCloseDays=?   ");
+
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
-		ResultSet rs = ps.executeQuery();
 
-		File file = new File(getFilename(sym, dos));
-		PrintWriter pw = new PrintWriter(file);
-		pw.println("% 1. Title: " + sym + "_tsf_correlation");
-		pw.println("@RELATION " + sym + "_" + dos);
+		ResultSet rs = ps.executeQuery();
 
 		while (rs.next()) {
 
 			String functionSymbol = rs.getString("functionSymbol");
 			GetETFDataUsingSQL gsdTSF = GetETFDataUsingSQL.getInstance(functionSymbol);
 
-			if (startDate.compareTo(gsdTSF.inDate[50]) < 0)
-				startDate = gsdTSF.inDate[50];
-
 			int tsfPeriod = rs.getInt("tsfPeriod");
-
 			double tsf[] = new double[gsdTSF.inClose.length];
 			MInteger outBegIdx = new MInteger();
 			MInteger outNBElement = new MInteger();
@@ -122,13 +98,149 @@ public class TSFMakeARFFfromSQL {
 
 			Realign.realign(tsf, outBegIdx.value);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
-			tsfs.put(symKey, tsf);
-			int doubleBack = rs.getInt("doubleBack");
-			doubleBacks.put(symKey, doubleBack);
-			tsffunctionDaysDiff.put(symKey, rs.getInt("functionDaysDiff"));
+
+			parms.addSymbol(symKey);
+			parms.settsfs(symKey, tsf);
+			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
+			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
+			parms.setDateIndex(symKey, gsdTSF.dateIndex);
+
+		}
+
+		return parms;
+	}
+
+	@Override
+	public String makeARFFFromSQL(String sym, int daysOut, AttributeParm parms, boolean startWithLargeGroup)
+			throws Exception {
+
+		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
+
+		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
+		int pos = 25 + daysOut;
+		String startDate = gsd.inDate[pos];
+
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		pw.println("% 1. Title: " + sym + "_tsf_correlation");
+		pw.println("@RELATION " + sym + "_" + daysOut);
+
+		for (String symKey : parms.keySet()) {
+
 			pw.println("@ATTRIBUTE " + symKey + "tsf NUMERIC");
 			pw.println("@ATTRIBUTE " + symKey + "tsfBack NUMERIC");
-			tsfDates.put(symKey, gsdTSF.inDate);
+			if (startDate.compareTo(parms.getDateIndex(symKey).firstKey()) < 0)
+				startDate = parms.getDateIndex(symKey).firstKey();
+		}
+
+		if (withAttributePosition)
+			pw.println("@ATTRIBUTE class NUMERIC");
+		else
+			pw.println(db.getAttributeDefinition());
+
+		pw.println("@DATA");
+		int lines = 0;
+		while (gsd.inDate[pos].compareTo(startDate) < 0)
+			pos++;
+		pos += 20;
+		int largeGroupCnt = -1;
+		int positiveCount = 0;
+		int negativeCount = 0;
+		skipDay: for (int npPos = pos; npPos < gsd.inDate.length - daysOut - 1; npPos++) {
+			nextKey: for (String key : parms.keySet()) {
+
+				Integer dateidx = parms.getDateIndex(key).get(gsd.inDate[npPos]);
+				if (dateidx == null)
+					continue skipDay;
+
+				// check for missing days
+				for (int i = 0; i < (parms.getDaysDiff(key) + daysOut) & (npPos + i < gsd.inDate.length); i++) {
+					String gtest = gsd.inDate[npPos + i];
+					if (parms.getDateIndex(key).containsKey(gtest) == false) {
+						continue skipDay;
+					}
+				}
+
+				continue nextKey;
+
+			}
+			if (gsd.inClose[npPos + daysOut] > gsd.inClose[npPos])
+				positiveCount++;
+			else
+				negativeCount++;
+
+		}
+		boolean largeGroupIsPositive = positiveCount > negativeCount;
+		int stopAt = 0;
+		int startAt = 0;
+
+		if (startWithLargeGroup) // start the first large group
+			if (largeGroupIsPositive)
+				stopAt = negativeCount;
+			else
+				stopAt = positiveCount;
+		else { // start the second large group
+			if (largeGroupIsPositive)
+				startAt = positiveCount - negativeCount;
+			else
+				startAt = negativeCount - positiveCount;
+		}
+		for (int iday = pos; iday < gsd.inDate.length - daysOut - 1; iday++) {
+			StringBuffer sb = printAttributeData(iday, gsd.inDate, daysOut, parms, gsd.inClose, db,
+					withAttributePosition, false);
+			if (sb != null) {
+				boolean positive = gsd.inClose[iday + daysOut] > gsd.inClose[iday];
+				if (positive) {
+					if (largeGroupIsPositive) {
+						largeGroupCnt++;
+						if (startWithLargeGroup) {
+							if (largeGroupCnt > stopAt)
+								continue;
+						} else {
+							if (largeGroupCnt < startAt)
+								continue;
+						}
+					}
+				} else {
+					if (!largeGroupIsPositive) {
+						largeGroupCnt++;
+						if (startWithLargeGroup) {
+							if (largeGroupCnt > stopAt)
+								continue;
+						} else {
+							if (largeGroupCnt < startAt)
+								continue;
+						}
+					}
+
+				}
+
+				pw.print(sb.toString());
+				addDateToPosition(gsd.inDate[iday], lines);
+				lines++;
+			}
+		}
+
+		return sw.toString();
+	}
+
+	@Override
+	public String makeARFFFromSQLForQuestionMark(String sym, int daysOut, AttributeParm parms) throws Exception {
+
+		Core core = new Core();
+
+		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
+
+		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
+
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		pw.println("% 1. Title: " + sym + "_tsf_correlation");
+		pw.println("@RELATION " + sym + "_" + daysOut);
+
+		for (String symKey : parms.keySet()) {
+			pw.println("@ATTRIBUTE " + symKey + "tsf NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "tsfBack NUMERIC");
 		}
 
 		if (withAttributePosition)
@@ -138,109 +250,59 @@ public class TSFMakeARFFfromSQL {
 
 		pw.println("@DATA");
 
-		int arraypos[] = new int[tsfs.size()];
-		int pos = 50;
-		while (gsd.inDate[pos].compareTo(startDate) < 0)
-			pos++;
-
-		int attributePos = -1;
-		eemindexLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut - 1;) {
-			String posDate = gsd.inDate[iday];
-			pos = 0;
-			for (String key : tsfs.keySet()) {
-				String sdate = tsfDates.get(key)[arraypos[pos]];
-				int dcomp = posDate.compareTo(sdate);
-				if (dcomp < 0) {
-					iday++;
-					continue eemindexLoop;
-				}
-				if (dcomp > 0) {
-					arraypos[pos]++;
-					continue eemindexLoop;
-				}
-				pos++;
-			}
-
-			pos = 0;
-			for (String key : tsfs.keySet()) {
-				int giDay = iday - tsffunctionDaysDiff.get(key);
-				int siDay = arraypos[pos] - tsffunctionDaysDiff.get(key);
-				// are we missing any days in between
-				for (int i = 0; i < (tsffunctionDaysDiff.get(key) + daysOut); i++) {
-					String gtest = gsd.inDate[giDay + i];
-					String stest = tsfDates.get(key)[siDay + i];
-					if (gtest.compareTo(stest) != 0) {
-						iday++;
-						continue eemindexLoop;
-					}
-				}
-				pos++;
-			}
-			Date now = sdf.parse(posDate);
-
-			Calendar cdMove = Calendar.getInstance();
-			cdMove.setTime(now);
-			int idt = 1;
-			int daysOutCalc = 0;
-			while (true) {
-				cdMove.add(Calendar.DAY_OF_MONTH, +1);
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY)
-					continue;
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY)
-					continue;
-				daysOutCalc++;
-				idt++;
-				if (idt > daysOut)
-					break;
-			}
-			String endDate = gsd.inDate[iday + daysOut];
-			if (daysOutCalc != daysOut)
-				System.out.println(posDate + " here " + endDate + " by " + daysOutCalc + " not " + daysOut);
-
-			printAttributeData(iday, daysOut, pw, tsfs, tsffunctionDaysDiff, doubleBacks, arraypos, gsd.inClose, db,
-					withAttributePosition);
-			dateAttribute.put(gsd.inDate[iday], ++attributePos);
-			iday++;
-			for (pos = 0; pos < arraypos.length; pos++) {
-				arraypos[pos]++;
-			}
+		int iday = gsd.inDate.length - 1;
+		StringBuffer sb = printAttributeData(iday, gsd.inDate, daysOut, parms, gsd.inClose, db, withAttributePosition,
+				true);
+		if (sb != null) {
+			pw.print(sb.toString());
 
 		}
-
-		pw.close();
-		return file;
+		return sw.toString();
 	}
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
 	public String getAttributeText(double tsf[], int tsffunctionDaysDiff, int tsfstart, int doubleBack) {
+
 		return tsf[tsfstart - doubleBack] + "," + tsf[tsfstart - (tsffunctionDaysDiff + doubleBack)] + ",";
 
 	}
 
-	public void printAttributeData(int iday, int daysOut, PrintWriter pw, Object inParms,
-			TreeMap<String, Integer> functionDaysDiffMap, TreeMap<String, Integer> doubleBacks, int[] arraypos,
-			double[] closes, DeltaBands priceBands, boolean withAttributePosition) {
-		TreeMap<String, double[]> tsfs = (TreeMap<String, double[]>) inParms;
-		int pos = 0;
-		for (String key : tsfs.keySet()) {
+	public StringBuffer printAttributeData(int iday, String etfDates[], int daysOut, AttributeParm parms,
+			double[] closes, DeltaBands priceBands, boolean withAttributePosition, boolean forLastUseQuestionMark) {
+		StringBuffer returnBuffer = new StringBuffer(1000);
 
-			double tsf[] = tsfs.get(key);
-			int tsffunctionDaysDiff = functionDaysDiffMap.get(key);
-			int tsfstart = arraypos[pos];
-			Integer doubleBack = doubleBacks.get(key);
+		for (String key : parms.keySet()) {
+
+			int functionDaysDiff = parms.getDaysDiff(key);
+			Integer dateidx = parms.getDateIndex(key).get(etfDates[iday]);
+			if (dateidx == null)
+				return null;
+			// are we missing any days in between
+			int giDay = iday - functionDaysDiff;
+			// are we missing any days in between
+			if (!forLastUseQuestionMark)
+				for (int i = 0; i < (functionDaysDiff + daysOut); i++) {
+					String gtest = etfDates[giDay + i];
+					if (parms.getDateIndex(key).containsKey(gtest) == false) {
+						return null;
+					}
+				}
+			double tsfs[] = ((TSFParms) parms).gettsfs(key);
+			Integer doubleBack = parms.getDoubleBacks(key);
 			if (doubleBack == null)
 				doubleBack = 0;
-			pw.print(getAttributeText(tsf, tsffunctionDaysDiff, tsfstart, doubleBack.intValue()));
-
-			pos++;
-
+			returnBuffer.append(getAttributeText(tsfs, functionDaysDiff, dateidx, doubleBack.intValue()));
 		}
-
-		if (withAttributePosition)
-			pw.println(priceBands.getAttributePosition(iday, daysOut, closes));
+		if (forLastUseQuestionMark)
+			returnBuffer.append("?");
+		else if (withAttributePosition)
+			returnBuffer.append(priceBands.getAttributePosition(iday, daysOut, closes));
 		else
-			pw.println(priceBands.getAttributeValue(iday, daysOut, closes));
+			returnBuffer.append(priceBands.getAttributeValue(iday, daysOut, closes));
+		returnBuffer.append("\n");
+
+		return returnBuffer;
 	}
 
 }

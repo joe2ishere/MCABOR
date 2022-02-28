@@ -180,10 +180,10 @@ public class TSFandMACDMakeARFFfromSQL {
 		int tsfArrayPos[] = new int[tsfs.size()];
 		int macdArrayPos[] = new int[macds.size()];
 		int pos = 50;
-		 
+
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
-
+		pos += 20;
 		int attributePos = -1;
 		dateLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut - 1;) {
 			String posDate = gsd.inDate[iday];

@@ -7,8 +7,8 @@ public class MACDParms implements AttributeParm {
 	public class MACDSymbolParm {
 		Integer functionDaysDiff;
 		Integer doubleBacks;
-		String[] dates;
-		int lastDateStart;
+		TreeMap<String, Integer> dateIndex;
+
 		double[] macd;
 		double[] signal;
 	}
@@ -27,7 +27,6 @@ public class MACDParms implements AttributeParm {
 	@Override
 	public void addSymbol(String sym) {
 		MACDPMap.put(sym, new MACDSymbolParm());
-		MACDPMap.get(sym).lastDateStart = 0;
 	}
 
 	@Override
@@ -67,23 +66,15 @@ public class MACDParms implements AttributeParm {
 	}
 
 	@Override
-	public String[] getAttrDates(String sym) {
-		return MACDPMap.get(sym).dates;
+	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
+		MACDPMap.get(sym).dateIndex = dateIndex;
+
 	}
 
 	@Override
-	public void setAttrDates(String sym, String dates[]) {
-		MACDPMap.get(sym).dates = dates;
-	}
+	public TreeMap<String, Integer> getDateIndex(String sym) {
 
-	@Override
-	public int getLastDateStart(String sym) {
-		return MACDPMap.get(sym).lastDateStart;
-	}
-
-	@Override
-	public void setLastDateStart(String sym, int start) {
-		MACDPMap.get(sym).lastDateStart = start;
+		return MACDPMap.get(sym).dateIndex;
 	}
 
 }

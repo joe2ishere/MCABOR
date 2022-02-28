@@ -157,13 +157,14 @@ public class MACDCorrelationMutualFunds implements Runnable {
 										ArrayList<String> dates = mfdates.get(closeSym);
 
 										{
-											for (int doubleBack = 0; doubleBack < 5; doubleBack++) {
+											for (int doubleBack = 1; doubleBack <= 5; doubleBack++) {
 												ArrayList<Double> ccArray1 = new ArrayList<Double>(),
 														ccArray2 = new ArrayList<Double>();
 
-												for (int pgsdDateIndex = 50, mfDateIndex = 50; mfDateIndex < macdGSD.inDate.length
-														- priceDaysDiff
-														& pgsdDateIndex < dates.size() - priceDaysDiff;) {
+												for (int pgsdDateIndex = 50,
+														mfDateIndex = 50; mfDateIndex < macdGSD.inDate.length
+																- priceDaysDiff
+																& pgsdDateIndex < dates.size() - priceDaysDiff;) {
 													int dateCompare = macdGSD.inDate[mfDateIndex]
 															.compareTo(dates.get(pgsdDateIndex));
 													if (dateCompare < 0) {

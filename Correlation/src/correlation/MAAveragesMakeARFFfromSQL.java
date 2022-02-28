@@ -2,14 +2,12 @@ package correlation;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Scanner;
-import java.util.TreeMap;
 import java.util.logging.LogManager;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
@@ -21,7 +19,7 @@ import bands.DeltaBands;
 import movingAvgAndLines.MovingAvgAndLineIntercept;
 import util.getDatabaseConnection;
 
-public class MAAveragesMakeARFFfromSQL {
+public class MAAveragesMakeARFFfromSQL extends AttributeMakerFromSQL {
 
 	boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
 
@@ -59,56 +57,39 @@ public class MAAveragesMakeARFFfromSQL {
 		}
 		sin.close();
 		MAAveragesMakeARFFfromSQL malines = new MAAveragesMakeARFFfromSQL(false);
-		malines.makeARFFFromSQL(sym, dos);
+		Connection conn = getDatabaseConnection.makeConnection();
+		int daysOut = Integer.parseInt(dos);
+		AttributeParm parms = malines.buildParameters(sym, daysOut, conn);
+		String data = malines.makeARFFFromSQL(sym, daysOut, parms, false);
+		File file = new File(getFilename(sym, daysOut));
+		PrintWriter pw = new PrintWriter(file);
+		pw.print(data);
+		pw.flush();
+		pw.close();
 	}
 
-	public String getFilename(String sym, String dos) {
+	public static String getFilename(String sym, int dos) {
 
-		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_malavg_correlation.arff";
+		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_malavg2_correlation.arff";
 	}
 
-	public TreeMap<String, Integer> dateAttribute = new TreeMap<>();
-
-	public File makeARFFFromSQL(String sym, String dos) throws Exception {
-
-		Connection conn = null;
-
-		int attributePos = -1;
-
-		conn = getDatabaseConnection.makeConnection();
+	@Override
+	public AttributeParm buildParameters(String sym, int daysOut, Connection conn) throws Exception {
+		MAAvgParms parms = new MAAvgParms();
 
 		PreparedStatement ps = conn
 				.prepareStatement("select * from maline_correlation" + " where symbol=? and toCloseDays=?");
 
-		int daysOut = Integer.parseInt(dos);
-
 		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-
-		TreeMap<String, Object> malis = new TreeMap<>();
-		TreeMap<String, String[]> malDates = new TreeMap<>();
 
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
 
-		DeltaBands db = new DeltaBands(gsd.inClose, daysOut);
-		int pos = 200;
-		String startDate = gsd.inDate[pos];
-
-		File file = new File(getFilename(sym, dos));
-		PrintWriter pw = new PrintWriter(file);
-		pw.println("% 1. Title: " + sym + "_malis_correlation");
-		pw.println("@RELATION " + sym + "_" + daysOut);
-
 		while (rs.next()) {
 
 			String functionSymbol = rs.getString("functionSymbol");
-
 			GetETFDataUsingSQL pgsd = GetETFDataUsingSQL.getInstance(functionSymbol);
-
-			if (startDate.compareTo(pgsd.inDate[pos]) < 0)
-				startDate = pgsd.inDate[pos];
-
 			int period = rs.getInt("period");
 			String matype = rs.getString("maType");
 			MAType maType = null;
@@ -118,17 +99,39 @@ public class MAAveragesMakeARFFfromSQL {
 					break;
 				}
 			}
-
 			MovingAvgAndLineIntercept mal = new MovingAvgAndLineIntercept(pgsd, period, maType, period, maType);
 			MaLineParmToPass mlp = new MaLineParmToPass(mal, pgsd.inClose, null);
-
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
 
-			malis.put(symKey, mlp);
+			parms.addSymbol(symKey);
+			parms.setMALI(symKey, mlp);
+			parms.setDaysDiff(symKey, 0);
+			parms.setDateIndex(symKey, pgsd.dateIndex);
+		}
 
+		return parms;
+
+	}
+
+	@Override
+	public String makeARFFFromSQL(String sym, int daysOut, AttributeParm parms, boolean startWithLargeGroup)
+			throws Exception {
+
+		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
+
+		DeltaBands db = new DeltaBands(gsd.inClose, daysOut);
+		int pos = 200;
+		String startDate = gsd.inDate[pos];
+
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		pw.println("% 1. Title: " + sym + "_malis_correlation");
+		pw.println("@RELATION " + sym + "_" + daysOut);
+
+		for (String symKey : parms.keySet()) {
 			pw.println("@ATTRIBUTE " + symKey + "maAVG NUMERIC");
-			malDates.put(symKey, pgsd.inDate);
-
+			if (startDate.compareTo(parms.getDateIndex(symKey).firstKey()) < 0)
+				startDate = parms.getDateIndex(symKey).firstKey();
 		}
 
 		if (withAttributePosition)
@@ -138,66 +141,128 @@ public class MAAveragesMakeARFFfromSQL {
 
 		pw.println("@DATA");
 
-		int arraypos[] = new int[malis.size()];
-
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
+		pos += 20;
+		int lines = 0;
+		int largeGroupCnt = -1;
+		int positiveCount = 0;
+		int negativeCount = 0;
 
-		eemindexLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut - 1;) {
-			String posDate = gsd.inDate[iday];
-			pos = 0;
-			for (String key : malis.keySet()) {
-				String sdate = malDates.get(key)[arraypos[pos]];
-				int dcomp = posDate.compareTo(sdate);
-				if (dcomp < 0) {
-					iday++;
-					continue eemindexLoop;
+		skipDay: for (int npPos = pos; npPos < gsd.inDate.length - daysOut - 1; npPos++) {
+			nextKey: for (String key : parms.keySet()) {
+
+				Integer dateidx = parms.getDateIndex(key).get(gsd.inDate[npPos]);
+				if (dateidx == null)
+					continue skipDay;
+
+				// check for missing days
+				for (int i = 0; i < (parms.getDaysDiff(key) + daysOut) & (npPos + i < gsd.inDate.length); i++) {
+					String gtest = gsd.inDate[npPos + i];
+					if (parms.getDateIndex(key).containsKey(gtest) == false) {
+						continue skipDay;
+					}
 				}
-				if (dcomp > 0) {
-					arraypos[pos]++;
-					continue eemindexLoop;
+
+				continue nextKey;
+
+			}
+			if (gsd.inClose[npPos + daysOut] > gsd.inClose[npPos])
+				positiveCount++;
+			else
+				negativeCount++;
+
+		}
+		boolean largeGroupIsPositive = positiveCount > negativeCount;
+		int stopAt = 0;
+		int startAt = 0;
+
+		if (startWithLargeGroup) // start the first large group
+			if (largeGroupIsPositive)
+				stopAt = negativeCount;
+			else
+				stopAt = positiveCount;
+		else { // start the second large group
+			if (largeGroupIsPositive)
+				startAt = positiveCount - negativeCount;
+			else
+				startAt = negativeCount - positiveCount;
+		}
+		for (int iday = pos; iday < gsd.inDate.length - daysOut - 1; iday++) {
+			StringBuffer sb = printAttributeData(iday, gsd.inDate, daysOut, parms, gsd.inClose, db,
+					withAttributePosition, false);
+			if (sb != null) {
+				boolean positive = gsd.inClose[iday + daysOut] > gsd.inClose[iday];
+				if (positive) {
+					if (largeGroupIsPositive) {
+						largeGroupCnt++;
+						if (startWithLargeGroup) {
+							if (largeGroupCnt > stopAt)
+								continue;
+						} else {
+							if (largeGroupCnt < startAt)
+								continue;
+						}
+					}
+				} else {
+					if (!largeGroupIsPositive) {
+						largeGroupCnt++;
+						if (startWithLargeGroup) {
+							if (largeGroupCnt > stopAt)
+								continue;
+						} else {
+							if (largeGroupCnt < startAt)
+								continue;
+						}
+					}
+
 				}
-				pos++;
-			}
 
-			pos = 0;
-			Date now = sdf.parse(posDate);
-
-			Calendar cdMove = Calendar.getInstance();
-			cdMove.setTime(now);
-			int idt = 1;
-			int daysOutCalc = 0;
-			while (true) {
-				cdMove.add(Calendar.DAY_OF_MONTH, +1);
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY)
-					continue;
-				if (cdMove.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY)
-					continue;
-				daysOutCalc++;
-				idt++;
-				if (idt > daysOut)
-					break;
-			}
-			String endDate = gsd.inDate[iday + daysOut];
-			dateAttribute.put(gsd.inDate[iday], ++attributePos);
-			if (daysOutCalc != daysOut)
-				System.out.println(posDate + " here " + endDate + " by " + daysOutCalc + " not " + daysOut);
-
-			printAttributeData(iday, daysOut, pw, malis, arraypos, gsd.inClose, gsd.inDate[iday], db,
-					withAttributePosition);
-
-			iday++;
-			for (pos = 0; pos < arraypos.length; pos++) {
-				arraypos[pos]++;
+				pw.print(sb.toString());
+				addDateToPosition(gsd.inDate[iday], lines);
+				lines++;
 			}
 		}
-		pw.close();
-		return file;
+
+		return sw.toString();
+	}
+
+	@Override
+	public String makeARFFFromSQLForQuestionMark(String sym, int daysOut, AttributeParm parms) throws Exception {
+
+		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
+
+		DeltaBands db = new DeltaBands(gsd.inClose, daysOut);
+		int pos = 200;
+
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		pw.println("% 1. Title: " + sym + "_malis_correlation");
+		pw.println("@RELATION " + sym + "_" + daysOut);
+
+		for (String symKey : parms.keySet()) {
+			pw.println("@ATTRIBUTE " + symKey + "maAVG NUMERIC");
+		}
+
+		if (withAttributePosition)
+			pw.println("@ATTRIBUTE class NUMERIC");
+		else
+			pw.println(db.getAttributeDefinition());
+
+		pw.println("@DATA");
+		int iday = gsd.inDate.length - 1;
+		StringBuffer sb = printAttributeData(iday, gsd.inDate, daysOut, parms, gsd.inClose, db, withAttributePosition,
+				true);
+		if (sb != null) {
+			pw.print(sb.toString());
+		}
+
+		return sw.toString();
 	}
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-	public void getAttributeText(PrintWriter pw, MaLineParmToPass ptp, int start) {
+	public void getAttributeText(StringBuffer sb, MaLineParmToPass ptp, int start) {
 
 		Line ln;
 		String rsp1 = "?";
@@ -214,27 +279,40 @@ public class MAAveragesMakeARFFfromSQL {
 			rsp1 = yln + "";
 		} catch (Exception e) {
 		}
-		pw.print(rsp1 + ",");
+		sb.append(rsp1 + ",");
 	}
 
-	public void printAttributeData(int iday, int daysOut, PrintWriter pw, TreeMap<String, Object> maLineParms,
-			int[] arraypos, double[] closes, String date, DeltaBands priceBands, boolean withAttributePosition)
-			throws Exception {
-		int pos = 0;
-		for (String key : maLineParms.keySet()) {
-
-			MaLineParmToPass mlp = (MaLineParmToPass) maLineParms.get(key);
-			mlp.processDate = date;
-			getAttributeText(pw, mlp, daysOut);
-
-			pos++;
-
+	public StringBuffer printAttributeData(int iday, String etfDates[], int daysOut, AttributeParm parms,
+			double[] closes, DeltaBands priceBands, boolean withAttributePosition, boolean forLastUseQuestionMark) {
+		StringBuffer returnBuffer = new StringBuffer(1000);
+		for (String key : parms.keySet()) {
+			int functionDaysDiff = parms.getDaysDiff(key);
+			Integer dateidx = parms.getDateIndex(key).get(etfDates[iday]);
+			if (dateidx == null)
+				return null;
+			// are we missing any days in between
+			int giDay = iday - functionDaysDiff;
+			// are we missing any days in between
+			if (!forLastUseQuestionMark)
+				for (int i = 0; i < (functionDaysDiff + daysOut); i++) {
+					String gtest = etfDates[giDay + i];
+					if (parms.getDateIndex(key).containsKey(gtest) == false) {
+						return null;
+					}
+				}
+			MaLineParmToPass mlp = ((MAAvgParms) parms).getMALI(key);
+			mlp.processDate = etfDates[iday];
+			getAttributeText(returnBuffer, mlp, daysOut);
 		}
 
-		if (withAttributePosition)
-			pw.println(priceBands.getAttributePosition(iday, daysOut, closes));
+		if (forLastUseQuestionMark)
+			returnBuffer.append("?");
+		else if (withAttributePosition)
+			returnBuffer.append(priceBands.getAttributePosition(iday, daysOut, closes));
 		else
-			pw.println(priceBands.getAttributeValue(iday, daysOut, closes));
+			returnBuffer.append(priceBands.getAttributeValue(iday, daysOut, closes));
+		returnBuffer.append("\n");
+		return returnBuffer;
 	}
 
 }

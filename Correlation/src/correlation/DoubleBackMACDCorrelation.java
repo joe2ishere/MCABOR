@@ -39,9 +39,9 @@ public class DoubleBackMACDCorrelation implements Runnable {
 
 	}
 
-	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 180 days
-	// if 180 days then just a limited number of etfs are done.
-	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld"));
+	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 130 days
+	// if 130 days then just a limited number of etfs are done.
+	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld", "xle"));
 
 	public static void main(String[] args) throws Exception {
 
@@ -62,6 +62,7 @@ public class DoubleBackMACDCorrelation implements Runnable {
 		for (String macdSym : cu.symList.keySet()) {
 			if (cu.doneList.contains(macdSym))
 				continue;
+
 			GetETFDataUsingSQL macdGSD = cu.gsds.get(macdSym);
 			if (cu.symList.get(macdSym) < cu.entryLimit)
 				continue;
@@ -125,8 +126,8 @@ public class DoubleBackMACDCorrelation implements Runnable {
 
 	}
 
-	File doneFile = new File("macdDoubleDone" + (doingBigDayDiff ? "180Days" : "") + ".txt");
-	public static File tabFile = new File("macdDoubleTaB" + (doingBigDayDiff ? "180Days" : "") + ".txt");
+	File doneFile = new File("macdDoubleDone" + (doingBigDayDiff ? "130Days" : "") + ".txt");
+	public static File tabFile = new File("macdDoubleTaB" + (doingBigDayDiff ? "130Days" : "") + ".txt");
 
 	public void loadTables() {
 
@@ -242,10 +243,10 @@ public class DoubleBackMACDCorrelation implements Runnable {
 							continue;
 					}
 					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
-					nextDD: for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 180
+					nextDD: for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 130
 							: 30); pricefunctionDaysDiff += 1) {
 
-						for (int smfunctionDaysDiff = 1; smfunctionDaysDiff <= 9; smfunctionDaysDiff += 2) {
+						for (int functionDaysDiff = 1; functionDaysDiff <= 9; functionDaysDiff += 2) {
 							{
 								/*
 								 * ccarray1 has to be computed here so the dates align correctly
@@ -258,7 +259,7 @@ public class DoubleBackMACDCorrelation implements Runnable {
 
 								int startMACDDay = macdDayIndex;
 								int startClosingDay = closingDayIndex;
-								for (int doubleBack = 0; doubleBack < 2; doubleBack += 1) {
+								for (int doubleBack = 1; doubleBack <= 5; doubleBack++) {
 									ArrayList<Double> ccArray1 = new ArrayList<Double>();
 									ArrayList<Double> ccArray2 = new ArrayList<Double>();
 
@@ -284,7 +285,7 @@ public class DoubleBackMACDCorrelation implements Runnable {
 										ccArray1.add(closingGSD.inClose[closingDayIndex + pricefunctionDaysDiff]
 												/ closingGSD.inClose[closingDayIndex]);
 										ccArray2.add((q.macds[macdDayIndex - (doubleBack)]
-												+ q.macds[macdDayIndex - (smfunctionDaysDiff + doubleBack)]) / 2);
+												+ q.macds[macdDayIndex - (functionDaysDiff + doubleBack)]) / 2);
 
 										macdDayIndex++;
 
@@ -314,7 +315,7 @@ public class DoubleBackMACDCorrelation implements Runnable {
 
 										int setAt = tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.fastPeriod,
-														q.slowPeriod, q.signalPeriod, smfunctionDaysDiff, doubleBack,
+														q.slowPeriod, q.signalPeriod, functionDaysDiff, doubleBack,
 														corr));
 										if (setAt != -1) {
 											if (setAt > 0) {

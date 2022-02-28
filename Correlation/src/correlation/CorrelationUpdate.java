@@ -37,6 +37,8 @@ public class CorrelationUpdate {
 		buildLists(conn);
 	}
 
+	public ArrayList<String> tooHigh = new ArrayList<String>();
+
 	public void buildLists(Connection conn) throws Exception {
 
 		PreparedStatement psLastDate = conn
@@ -49,6 +51,12 @@ public class CorrelationUpdate {
 
 		String latestDate = rsLastDate.getString(1);
 
+		PreparedStatement psStdTooHigh = conn.prepareStatement("SELECT symbol FROM stdofclose WHERE s > a and a > 25");
+		ResultSet rsTooHigh = psStdTooHigh.executeQuery();
+		while (rsTooHigh.next()) {
+			tooHigh.add(rsTooHigh.getString(1).toLowerCase());
+		}
+
 		PreparedStatement ps = conn.prepareStatement(
 				"select symbol, AVG(volume) AS vavg, count(*) as txncnt  from etfprices  GROUP BY symbol ORDER BY symbol");
 		ResultSet rs = ps.executeQuery();
@@ -56,14 +64,19 @@ public class CorrelationUpdate {
 		while (rs.next()) {
 
 			String sym = rs.getString(1).toLowerCase();
+//			if (tooHigh.contains(sym)) {
+//				System.out.println("skipping " + sym + " with std deviation price too high");
+//				continue;
+//			}
+
 			double vol = rs.getDouble(2);
-			int cnt = rs.getInt(3);
 
 			if (vol < volumeLimit) {
 				System.out.println("skipping " + sym + " with vol of " + vol);
 				continue;
 			}
 
+			int cnt = rs.getInt(3);
 			if (cnt < entryLimit) {
 				System.out.println("skipping " + sym + " with cnt of " + cnt);
 				continue;

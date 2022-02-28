@@ -16,7 +16,7 @@ import com.tictactec.ta.lib.Core;
 import com.tictactec.ta.lib.MInteger;
 
 import bands.DeltaBands;
-import correlation.TSFMakeARFFfromSQLPhase2;
+import correlation.TSFMakeARFFfromSQL;
 import correlation.TSFParms;
 import util.Averager;
 import util.getDatabaseConnection;
@@ -46,7 +46,7 @@ public class ReportUsingTSF {
 		String lastSym = "";
 		// PriceBands priceBands = null;
 		DeltaBands priceBands = null;
-		TSFMakeARFFfromSQLPhase2 makeSQL = new TSFMakeARFFfromSQLPhase2(false, true);
+		TSFMakeARFFfromSQL makeSQL = new TSFMakeARFFfromSQL(false, true);
 		while ((intsfLine = tsfBR.readLine()) != null) {
 			String intsfData[] = intsfLine.split("_");
 			String sym = intsfData[0];
@@ -123,8 +123,7 @@ public class ReportUsingTSF {
 				tsfp.settsfs(symKey, tsf);
 				tsfp.setDoubleBacks(symKey, daysDiff);
 				tsfp.setDaysDiff(symKey, tsfDiffDays);
-				tsfp.setAttrDates(symKey, pgsd.inDate);
-				tsfp.setLastDateStart(symKey, 75);
+				tsfp.setDateIndex(symKey, pgsd.dateIndex);
 
 				tsfPW.println("@ATTRIBUTE " + symKey + "tsf NUMERIC");
 				tsfPW.println("@ATTRIBUTE " + symKey + "tsfBack NUMERIC");

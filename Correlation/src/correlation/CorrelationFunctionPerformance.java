@@ -19,7 +19,8 @@ public class CorrelationFunctionPerformance {
 
 	public static void main(String[] args) throws Exception {
 
-		String withDebug[] = { "", "_debug" };
+		String withDebug[] = { ""/* , "_debug" */ };
+
 		for (String d : withDebug) {
 			System.out.println(d);
 			TreeMap<String, ArrayList<Averager>> functionDayAverager = getFunctionDayAverage(d);

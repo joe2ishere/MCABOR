@@ -146,6 +146,7 @@ public class MAandLIMakeARFFfromCorrelationFile {
 		int pos = 100;
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
+		pos += 20;
 
 		eemindexLoop: for (int iday = pos; iday < gsd.inDate.length - daysOut - 1;) {
 			String posDate = gsd.inDate[iday];

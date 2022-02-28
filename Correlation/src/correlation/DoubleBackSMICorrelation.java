@@ -33,9 +33,9 @@ public class DoubleBackSMICorrelation implements Runnable {
 		public int singnalPeriod;
 	}
 
-	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 180 days
-	// if 180 days then just a limited number of etfs are done.
-	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld"));
+	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 130 days
+	// if 130 days then just a limited number of etfs are done.
+	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld", "xle"));
 
 	public static void main(String[] args) throws Exception {
 
@@ -43,7 +43,7 @@ public class DoubleBackSMICorrelation implements Runnable {
 
 		CorrelationUpdate cu = new CorrelationUpdate(conn);
 
-		int threadCount = 5;
+		int threadCount = 4;
 		BlockingQueue<Queue> smiQue = new ArrayBlockingQueue<Queue>(threadCount);
 		DoubleBackSMICorrelation corrs = new DoubleBackSMICorrelation(smiQue, cu);
 		corrs.loadTables();
@@ -108,8 +108,8 @@ public class DoubleBackSMICorrelation implements Runnable {
 
 	}
 
-	File doneFile = new File("smiDoubleDone" + (doingBigDayDiff ? "180Days" : "") + ".txt");
-	static File tabFile = new File("smiDoubleTaB" + (doingBigDayDiff ? "180Days" : "") + ".txt");
+	File doneFile = new File("smiDoubleDone" + (doingBigDayDiff ? "130Days" : "") + ".txt");
+	static File tabFile = new File("smiDoubleTaB" + (doingBigDayDiff ? "130Days" : "") + ".txt");
 
 	public void loadTables() {
 		if (doneFile.exists() == false)
@@ -222,10 +222,10 @@ public class DoubleBackSMICorrelation implements Runnable {
 					}
 					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
 
-					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 180
+					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 130
 							: 30); pricefunctionDaysDiff += 1) {
 
-						for (int smifunctionDaysDiff = 0; smifunctionDaysDiff <= 1; smifunctionDaysDiff += 1) {
+						for (int functionDaysDiff = 0; functionDaysDiff <= 1; functionDaysDiff += 1) {
 							{
 								/*
 								 * ccarray1 has to be computed here so the dates align correctly
@@ -238,7 +238,7 @@ public class DoubleBackSMICorrelation implements Runnable {
 
 								int startSMIDay = smiDayIndex;
 								int startClosingDay = closingDayIndex;
-								nextDD: for (int smiDaysBack = 0; smiDaysBack < 2; smiDaysBack += 1) {
+								nextDD: for (int smiDaysBack = 1; smiDaysBack < 2; smiDaysBack += 1) {
 									ArrayList<Double> ccArray1 = new ArrayList<Double>();
 									ArrayList<Double> ccArray2 = new ArrayList<Double>();
 
@@ -264,7 +264,7 @@ public class DoubleBackSMICorrelation implements Runnable {
 										ccArray1.add(closingGSD.inClose[closingDayIndex + pricefunctionDaysDiff]
 												/ closingGSD.inClose[closingDayIndex]);
 										ccArray2.add((q.smis[smiDayIndex]
-												- q.signals[smiDayIndex - (smifunctionDaysDiff + smiDaysBack)]));
+												- q.signals[smiDayIndex - (functionDaysDiff + smiDaysBack)]));
 
 										smiDayIndex++;
 
@@ -294,8 +294,8 @@ public class DoubleBackSMICorrelation implements Runnable {
 											}
 										int setAt = tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.hilowPeriod,
-														q.maPeriod, q.smoothPeriod, q.singnalPeriod,
-														smifunctionDaysDiff, smiDaysBack, corr));
+														q.maPeriod, q.smoothPeriod, q.singnalPeriod, functionDaysDiff,
+														smiDaysBack, corr));
 
 										if (setAt != -1) {
 											if (setAt > 0) {

@@ -9,7 +9,6 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -17,85 +16,83 @@ import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 import com.tictactec.ta.lib.Core;
 import com.tictactec.ta.lib.MInteger;
 
-import util.Realign;
 import util.getDatabaseConnection;
 import utils.TopAndBottomList;
 
-public class DoubleBackDMICorrelation implements Runnable {
+public class DoubleBackATRCorrelation implements Runnable {
 
 	static public class Queue {
 		String sym;
-		double[] dmis;
-		int dmiPeriod;
+		double[] atrs;
+		int period;
 		String[] dates;
 
 		@Override
 		public String toString() {
-			return sym + ";" + dmiPeriod;
+			return sym + ";" + period;
 		}
 
 	}
-
-	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 130 days
-	// if 130 days then just a limited number of etfs are done.
-	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld", "xle"));
 
 	public static void main(String[] args) throws Exception {
 
 		Connection conn = getDatabaseConnection.makeConnection();
 
 		CorrelationUpdate cu = new CorrelationUpdate(conn);
+		// System.exit(0);
 
-		int threadCount = 5;
-		BlockingQueue<Queue> dmiQue = new ArrayBlockingQueue<Queue>(threadCount);
-		DoubleBackDMICorrelation corrs = new DoubleBackDMICorrelation(dmiQue, cu);
+		int threadCount = 6;
+		BlockingQueue<Queue> atrQue = new ArrayBlockingQueue<Queue>(threadCount);
+		DoubleBackATRCorrelation corrs = new DoubleBackATRCorrelation(atrQue, cu);
 		corrs.loadTables();
 
 		for (int i = 0; i < threadCount; i++) {
 			Thread thrswu = new Thread(corrs);
 			thrswu.start();
 		}
+
 		Core core = new Core();
-		for (String dmiSym : cu.symList.keySet()) {
 
-			if (cu.doneList.contains(dmiSym))
+		for (String atrSym : cu.symList.keySet()) {
+			if (cu.doneList.contains(atrSym))
+				continue;
+			if (cu.tooHigh.contains(atrSym))
 				continue;
 
-			GetETFDataUsingSQL dmiGSD = cu.gsds.get(dmiSym);
-			if (cu.symList.get(dmiSym) < cu.entryLimit)
+			GetETFDataUsingSQL atrGSD = cu.gsds.get(atrSym);
+			if (cu.symList.get(atrSym) < cu.entryLimit)
 				continue;
-			System.out.println("running " + dmiSym);
-			for (int dmiPeriod = 3; dmiPeriod <= 30; dmiPeriod += 1) {
-				{
-					double dmi[] = new double[dmiGSD.inClose.length];
-					MInteger outBegIdmi = new MInteger();
-					MInteger outNBElement = new MInteger();
+			System.out.println("running " + atrSym);
 
-					core.dx(0, dmiGSD.inClose.length - 1, dmiGSD.inHigh, dmiGSD.inLow, dmiGSD.inClose, dmiPeriod,
-							outBegIdmi, outNBElement, dmi);
+			for (int period = 2; period <= 23; period += 2) {
 
-					Realign.realign(dmi, outBegIdmi.value);
-					Queue q = new Queue();
-					q.sym = dmiSym;
-					q.dates = dmiGSD.inDate;
-					q.dmiPeriod = dmiPeriod;
-					q.dmis = dmi;
-					dmiQue.put(q);
+				double outATR[] = new double[atrGSD.inClose.length];
 
-				}
+				MInteger outBegIdx = new MInteger();
+				MInteger outNBElement = new MInteger();
+				core.atr(0, atrGSD.inClose.length - 1, atrGSD.inHigh, atrGSD.inLow, atrGSD.inClose, period, outBegIdx,
+						outNBElement, outATR);
+				Queue q = new Queue();
+				q.sym = atrSym;
+				q.dates = atrGSD.inDate;
+				q.period = period;
+				q.atrs = outATR;
+				atrQue.put(q);
+
+				// System.out.println(q.toString());
 			}
+
 			corrs.dumpTable();
-			System.out.println(dmiSym);
-			corrs.updateDoneFile(dmiSym);
+			corrs.updateDoneFile(atrSym);
 		}
 
 		for (int tc = 0; tc < threadCount; tc++) {
 			Queue qstop = new Queue();
 			qstop.sym = "<<<STOP>>>";
-			dmiQue.put(qstop);
+			atrQue.put(qstop);
 		}
 
-		while (dmiQue.isEmpty() == false)
+		while (atrQue.isEmpty() == false)
 			Thread.sleep(1000);
 		corrs.dumpTable();
 		System.exit(0);
@@ -104,16 +101,17 @@ public class DoubleBackDMICorrelation implements Runnable {
 	BlockingQueue<Queue> queuedGSD;
 	CorrelationUpdate cu;
 
-	public DoubleBackDMICorrelation(BlockingQueue<Queue> dmiQue, CorrelationUpdate cu) {
-		this.queuedGSD = dmiQue;
+	public DoubleBackATRCorrelation(BlockingQueue<Queue> atrQue, CorrelationUpdate cu) {
+		this.queuedGSD = atrQue;
 		this.cu = cu;
 
 	}
 
-	File doneFile = new File("dmiDoubleDone" + (doingBigDayDiff ? "130Days" : "") + ".txt");
-	static File tabFile = new File("dmiDoubleTaB" + (doingBigDayDiff ? "130Days" : "") + ".txt");
+	File doneFile = new File("atrDoubleDone.txt");
+	public static File tabFile = new File("atrDoubleTaB.txt");
 
 	public void loadTables() {
+
 		if (doneFile.exists() == false)
 			return;
 
@@ -155,7 +153,7 @@ public class DoubleBackDMICorrelation implements Runnable {
 
 	}
 
-	void updateDoneFile(String dmiSym) {
+	void updateDoneFile(String atrSym) {
 
 		FileWriter fw;
 		try {
@@ -166,8 +164,8 @@ public class DoubleBackDMICorrelation implements Runnable {
 			System.exit(0);
 			return;
 		}
-		PrintWriter pw = new PrintWriter(fw, true);
-		pw.println(dmiSym);
+		PrintWriter pw = new PrintWriter(fw);
+		pw.println(atrSym);
 		pw.flush();
 		pw.close();
 
@@ -187,17 +185,20 @@ public class DoubleBackDMICorrelation implements Runnable {
 			return;
 		}
 		PrintWriter pw = new PrintWriter(fw);
+		synchronized (cu.tops) {
 
-		for (String key : cu.tops.keySet()) {
-			pw.println(key);
-			TopAndBottomList tab = cu.tops.get(key);
-			synchronized (tab) {
-				for (int i = 0; i < tab.size; i++) {
-					pw.println(i + ":" + tab.getTopValue(i) + ":" + tab.getTopDescription()[i]);
+			for (String key : cu.tops.keySet()) {
+				pw.println(key);
+				TopAndBottomList tab = cu.tops.get(key);
+				synchronized (tab) {
+					for (int i = 0; i < tab.size; i++) {
+						pw.println(i + ":" + tab.getTopValue(i) + ":" + tab.getTopDescription()[i]);
+					}
+					pw.flush();
 				}
-				pw.flush();
 			}
 		}
+
 		pw.close();
 		System.out.println("end of dump tables");
 
@@ -218,41 +219,37 @@ public class DoubleBackDMICorrelation implements Runnable {
 					if (cu.updateSymbol != null)
 						if (cu.updateSymbol.contains(closingSymbol) == false)
 							continue;
-					if (doingBigDayDiff) {
-						if (bigDaysDiffList.contains(closingSymbol) == false)
-							continue;
-					}
+
 					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
 
-					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 130
-							: 30); pricefunctionDaysDiff += 1) {
+					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= 30; pricefunctionDaysDiff += 1) {
 
-						for (int functionDaysDiff = 1; functionDaysDiff <= 8; functionDaysDiff += 2) {
+						for (int functionDaysDiff = 1; functionDaysDiff <= 9; functionDaysDiff += 2) {
 							{
 								/*
 								 * ccarray1 has to be computed here so the dates align correctly
 								 */
-								int dmiDayIndex = 50, closingDayIndex = 50;
-								while (q.dates[dmiDayIndex].compareTo(closingGSD.inDate[closingDayIndex]) < 0)
-									dmiDayIndex++;
-								while (q.dates[dmiDayIndex].compareTo(closingGSD.inDate[closingDayIndex]) > 0)
+								int atrDayIndex = 50, closingDayIndex = 50;
+								while (q.dates[atrDayIndex].compareTo(closingGSD.inDate[closingDayIndex]) < 0)
+									atrDayIndex++;
+								while (q.dates[atrDayIndex].compareTo(closingGSD.inDate[closingDayIndex]) > 0)
 									closingDayIndex++;
 
-								int startDMIDay = dmiDayIndex;
+								int startatrDay = atrDayIndex;
 								int startClosingDay = closingDayIndex;
 
-								nextDD: for (int dmiDaysBack = 1; dmiDaysBack < 6; dmiDaysBack += 2) {
+								for (int doubleBack = 1; doubleBack <= 5; doubleBack += 2) {
 									ArrayList<Double> ccArray1 = new ArrayList<Double>();
 									ArrayList<Double> ccArray2 = new ArrayList<Double>();
 
-									for (dmiDayIndex = startDMIDay, closingDayIndex = startClosingDay; dmiDayIndex < q.dates.length
+									for (atrDayIndex = startatrDay, closingDayIndex = startClosingDay; atrDayIndex < q.dates.length
 											- pricefunctionDaysDiff
 											& closingDayIndex < closingGSD.inDate.length - pricefunctionDaysDiff;) {
-										String dmiDate = q.dates[dmiDayIndex];
+										String atrDate = q.dates[atrDayIndex];
 										String closingDate = closingGSD.inDate[closingDayIndex];
-										int dcomp = dmiDate.compareTo(closingDate);
+										int dcomp = atrDate.compareTo(closingDate);
 										if (dcomp < 0) {
-											dmiDayIndex++;
+											atrDayIndex++;
 											continue;
 										}
 										if (dcomp > 0) {
@@ -260,16 +257,16 @@ public class DoubleBackDMICorrelation implements Runnable {
 											continue;
 										}
 
-										if (q.dates[dmiDayIndex].compareTo(closingGSD.inDate[closingDayIndex]) != 0) {
+										if (q.dates[atrDayIndex].compareTo(closingGSD.inDate[closingDayIndex]) != 0) {
 											System.out.println("logic error comparing dates");
 											System.exit(-2);
 										}
 										ccArray1.add(closingGSD.inClose[closingDayIndex + pricefunctionDaysDiff]
 												/ closingGSD.inClose[closingDayIndex]);
-										ccArray2.add(q.dmis[dmiDayIndex - (dmiDaysBack)]
-												/ q.dmis[dmiDayIndex - (functionDaysDiff + dmiDaysBack)]);
+										ccArray2.add((q.atrs[atrDayIndex - (doubleBack)]
+												/ q.atrs[atrDayIndex - (functionDaysDiff + doubleBack)]) / 2);
 
-										dmiDayIndex++;
+										atrDayIndex++;
 
 										closingDayIndex++;
 
@@ -283,24 +280,21 @@ public class DoubleBackDMICorrelation implements Runnable {
 									double abscorr = Math.abs(corr);
 									String key = closingSymbol + "_" + pricefunctionDaysDiff;
 									synchronized (cu.tops) {
+
 										TopAndBottomList tabBest = cu.tops.get(key);
 										if (tabBest == null) {
 											tabBest = new TopAndBottomList(10);
 											cu.tops.put(key, tabBest);
 										}
-										for (int i = 0; i < 5; i++)
-											if ((tabBest.getTopDescription()[i].contains(";" + qSymbol)
-													& tabBest.getTopValue(i) >= abscorr)) {
-												continue nextDD;
-											}
 										int setAt = tabBest.setTop(abscorr,
-												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.dmiPeriod,
-														functionDaysDiff, dmiDaysBack, corr));
+												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.period,
+														functionDaysDiff, doubleBack, corr));
 										if (setAt != -1) {
 											if (setAt > 0) {
 												for (int i = 0; i < setAt; i++) {
 													if (tabBest.getTopDescription()[i].contains(";" + qSymbol))
 														tabBest.removeFromTop(setAt);
+
 												}
 											}
 											for (int i = setAt + 1; i < tabBest.size; i++) {
@@ -308,10 +302,11 @@ public class DoubleBackDMICorrelation implements Runnable {
 													tabBest.removeFromTop(i);
 											}
 										}
-										if (abscorr > cu.bestCorrelation) {
-											System.out.println("best correlation " + Math.abs(corr));
-											cu.bestCorrelation = abscorr;
-										}
+									}
+
+									if (abscorr > cu.bestCorrelation) {
+										System.out.println("best correlation " + Math.abs(corr));
+										cu.bestCorrelation = abscorr;
 									}
 
 								}
@@ -326,7 +321,7 @@ public class DoubleBackDMICorrelation implements Runnable {
 		} catch (
 
 		InterruptedException e1) {
-
+			// TODO Auto-generated catch block
 			e1.printStackTrace();
 			return;
 		}
@@ -347,12 +342,12 @@ public class DoubleBackDMICorrelation implements Runnable {
 		return ins[2];
 	}
 
-	public static int getDMIPeriod(String keyIn) {
+	public static int getPeriod(String keyIn) {
 		String ins[] = keyIn.split(";");
 		return Integer.parseInt(ins[3]);
 	}
 
-	public static int getDMIDaysBack(String keyIn) {
+	public static int getFunctionDaysDiff(String keyIn) {
 		String ins[] = keyIn.split(";");
 		return Integer.parseInt(ins[4]);
 	}
@@ -367,11 +362,11 @@ public class DoubleBackDMICorrelation implements Runnable {
 		return Double.parseDouble(ins[6]);
 	}
 
-	String makeKey(String symbol, int pricefunctionDaysDiff, String functionSymbol, int dmi, int dmifunctionDaysDiff,
-			int dmiDaysBack, double corr) {
+	String makeKey(String symbol, int pricefunctionDaysDiff, String functionSymbol, int period, int functionDaysDiff,
+			int atrDaysBack, double corr) {
 
-		return symbol + ";" + pricefunctionDaysDiff + ";" + functionSymbol + ";" + dmi + ";" + dmifunctionDaysDiff + ";"
-				+ dmiDaysBack + ";" + corr;
+		return symbol + ";" + pricefunctionDaysDiff + ";" + functionSymbol + ";" + period + ";" + functionDaysDiff + ";"
+				+ atrDaysBack + ";" + corr;
 	}
 
 	static DecimalFormat df = new DecimalFormat("0.0000");

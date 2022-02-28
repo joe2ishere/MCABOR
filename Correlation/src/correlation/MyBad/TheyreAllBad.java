@@ -1,9 +1,9 @@
 package correlation.MyBad;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -27,7 +27,7 @@ import weka.core.converters.ArffLoader.ArffReader;
 
 public class TheyreAllBad implements Runnable {
 
-	public String getFilename(String sym, String dos) {
+	public String getFilename(String sym, int dos) {
 		return "c:/users/joe/correlationARFF/bad/" + sym + "_" + dos + "_allbad_correlation.arff";
 	}
 
@@ -45,13 +45,12 @@ public class TheyreAllBad implements Runnable {
 			thrswu.start();
 			threadList.add(thrswu);
 		}
-
 		while (rs.next()) {
 			String sym = rs.getString(1);
 			for (int i = 1; i < 31; i++) {
 				NameQueue nq = new NameQueue();
 				nq.sym = sym;
-				nq.dos = i + "";
+				nq.dos = i;
 				Que.put(nq);
 			}
 		}
@@ -78,7 +77,7 @@ public class TheyreAllBad implements Runnable {
 
 	static public class NameQueue {
 		String sym;
-		String dos;
+		int dos;
 	}
 
 	BlockingQueue<NameQueue> Que;
@@ -95,7 +94,7 @@ public class TheyreAllBad implements Runnable {
 				String sym = q.sym;
 				if (sym.startsWith("stop it you idiot"))
 					return;
-				String dos = q.dos;
+				int dos = q.dos;
 				makeARFFFromSQL(sym, dos);
 			}
 		} catch (Exception e) {
@@ -104,7 +103,7 @@ public class TheyreAllBad implements Runnable {
 		}
 	}
 
-	public void makeARFFFromSQL(String sym, String dos) throws Exception {
+	public void makeARFFFromSQL(String sym, int dos) throws Exception {
 
 		File f = new File(getFilename(sym, dos));
 		if (f.exists())
@@ -124,59 +123,61 @@ public class TheyreAllBad implements Runnable {
 
 		pw.println("@DATA");
 
-		DMIMakeARFFfromSQL dmi = new DMIMakeARFFfromSQL(true);
-		ArffReader dmiArff = new ArffReader(new FileReader(dmi.makeARFFFromSQL(sym, dos)));
+		Connection conn = getDatabaseConnection.makeConnection();
+
+		DMIMakeARFFfromSQL dmi = new DMIMakeARFFfromSQL(true, true);
+		ArffReader dmiArff = new ArffReader(new StringReader(dmi.makeARFFFromSQL(sym, dos, conn)));
 		int dmiClassPos = dmiArff.getData().numAttributes() - 1;
 		dmiArff.getData().setClassIndex(dmiClassPos);
 
-		MACDMakeARFFfromSQL macd = new MACDMakeARFFfromSQL(true);
-		ArffReader macdArff = new ArffReader(new FileReader(macd.makeARFFFromSQL(sym, dos)));
+		MACDMakeARFFfromSQL macd = new MACDMakeARFFfromSQL(true, true);
+		ArffReader macdArff = new ArffReader(new StringReader(macd.makeARFFFromSQL(sym, dos, conn)));
 		int macdClassPos = macdArff.getData().numAttributes() - 1;
 		macdArff.getData().setClassIndex(macdClassPos);
 
 		MAAveragesMakeARFFfromSQL mavg = new MAAveragesMakeARFFfromSQL(true);
-		ArffReader mavgArff = new ArffReader(new FileReader(mavg.makeARFFFromSQL(sym, dos)));
+		ArffReader mavgArff = new ArffReader(new StringReader(mavg.makeARFFFromSQL(sym, dos, conn)));
 		int mavgClassPos = mavgArff.getData().numAttributes() - 1;
 		mavgArff.getData().setClassIndex(mavgClassPos);
 
 		MALinesMakeARFFfromSQL mali = new MALinesMakeARFFfromSQL(true);
-		ArffReader maliArff = new ArffReader(new FileReader(mali.makeARFFFromSQL(sym, dos)));
+		ArffReader maliArff = new ArffReader(new StringReader(mali.makeARFFFromSQL(sym, dos, conn)));
 		int maliClassPos = maliArff.getData().numAttributes() - 1;
 		maliArff.getData().setClassIndex(maliClassPos);
 
-		SMMakeARFFfromSQL smi = new SMMakeARFFfromSQL(true);
-		ArffReader smiArff = new ArffReader(new FileReader(smi.makeARFFFromSQL(sym, dos)));
+		SMMakeARFFfromSQL smi = new SMMakeARFFfromSQL(true, true);
+		ArffReader smiArff = new ArffReader(new StringReader(smi.makeARFFFromSQL(sym, dos, conn)));
 		int smiClassPos = smiArff.getData().numAttributes() - 1;
 		smiArff.getData().setClassIndex(smiClassPos);
 
-		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(true);
-		ArffReader tsfArff = new ArffReader(new FileReader(tsf.makeARFFFromSQL(sym, dos)));
+		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(true, true);
+		ArffReader tsfArff = new ArffReader(new StringReader(tsf.makeARFFFromSQL(sym, dos, conn)));
 		int tsfClassPos = tsfArff.getData().numAttributes() - 1;
 		tsfArff.getData().setClassIndex(tsfClassPos);
 
-		for (String dt : dmi.dateAttribute.keySet()) {
+		for (String dt : dmi.dateAttributeLookUp.keySet()) {
 
-			Integer dmiPos = dmi.dateAttribute.get(dt);
+			Integer dmiPos = dmi.getDatePosition(dt);
 			if (dmiPos == null)
 				continue;
 
-			Integer macdPos = macd.dateAttribute.get(dt);
+			Integer macdPos = macd.getDatePosition(dt);
 			if (macdPos == null)
 				continue;
 
-			Integer mavgPos = mavg.dateAttribute.get(dt);
+			Integer mavgPos = mavg.getDatePosition(dt);
 			if (mavgPos == null)
 				continue;
 
-			Integer maliPos = mali.dateAttribute.get(dt);
+			Integer maliPos = mali.getDatePosition(dt);
 			if (maliPos == null)
 				continue;
 
-			Integer smiPos = smi.dateAttribute.get(dt);
+			Integer smiPos = smi.getDatePosition(dt);
 			if (smiPos == null)
 				continue;
 
-			Integer tsfPos = tsf.dateAttribute.get(dt);
+			Integer tsfPos = tsf.getDatePosition(dt);
 			if (tsfPos == null)
 				continue;
 

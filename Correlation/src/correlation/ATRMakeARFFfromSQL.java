@@ -8,88 +8,22 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.util.Scanner;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.logging.LogManager;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
-import com.tictactec.ta.lib.MAType;
+import com.tictactec.ta.lib.Core;
+import com.tictactec.ta.lib.MInteger;
 
-import StochasticMomentum.StochasticMomentum;
 import bands.DeltaBands;
+import util.Realign;
 import util.getDatabaseConnection;
 
-public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
-	public class SMISymbolParm {
-		Integer functionDaysDiff;
-		Integer doubleBacks;
-		TreeMap<String, Integer> dateIndex;
-		StochasticMomentum smis;
-	}
-
-	public class SMIParms implements AttributeParm {
-		TreeMap<String, SMISymbolParm> SMIPMap;
-
-		public SMIParms() {
-			SMIPMap = new TreeMap<String, SMISymbolParm>();
-		}
-
-		@Override
-		public Set<String> keySet() {
-			return SMIPMap.keySet();
-		}
-
-		@Override
-		public void addSymbol(String sym) {
-			SMIPMap.put(sym, new SMISymbolParm());
-
-		}
-
-		@Override
-		public Integer getDaysDiff(String sym) {
-			return SMIPMap.get(sym).functionDaysDiff;
-		}
-
-		@Override
-		public void setDaysDiff(String sym, Integer daysDiff) {
-			SMIPMap.get(sym).functionDaysDiff = daysDiff;
-		}
-
-		@Override
-		public Integer getDoubleBacks(String sym) {
-			return SMIPMap.get(sym).doubleBacks;
-		}
-
-		@Override
-		public void setDoubleBacks(String sym, Integer doubleBacks) {
-			SMIPMap.get(sym).doubleBacks = doubleBacks;
-		}
-
-		public StochasticMomentum getSMIs(String sym) {
-			return SMIPMap.get(sym).smis;
-		}
-
-		public void setSMIs(String sym, StochasticMomentum sm) {
-			SMIPMap.get(sym).smis = sm;
-		}
-
-		@Override
-		public TreeMap<String, Integer> getDateIndex(String sym) {
-			return SMIPMap.get(sym).dateIndex;
-		}
-
-		@Override
-		public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
-			SMIPMap.get(sym).dateIndex = dateIndex;
-
-		}
-
-	}
+public class ATRMakeARFFfromSQL extends AttributeMakerFromSQL {
 
 	boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
 	boolean makeWith30Days = true;
 
-	public SMMakeARFFfromSQL(boolean b, boolean makeWith30) {
+	public ATRMakeARFFfromSQL(boolean b, boolean makeWith30) {
 		withAttributePosition = b;
 		makeWith30Days = makeWith30;
 	}
@@ -97,7 +31,6 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 	public static void main(String[] args) throws Exception {
 
 		LogManager.getLogManager().reset();
-		Connection conn = getDatabaseConnection.makeConnection();
 		Scanner sin = new Scanner(System.in);
 		String sym;
 		while (true) {
@@ -123,10 +56,11 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 			break;
 		}
 		sin.close();
-		SMMakeARFFfromSQL sm = new SMMakeARFFfromSQL(false, true);
+		ATRMakeARFFfromSQL atr = new ATRMakeARFFfromSQL(false, true);
+		Connection conn = getDatabaseConnection.makeConnection();
 		int daysOut = Integer.parseInt(dos);
-		AttributeParm parms = sm.buildParameters(sym, daysOut, conn);
-		String data = sm.makeARFFFromSQL(sym, daysOut, parms, true);
+		AttributeParm parms = atr.buildParameters(sym, daysOut, conn);
+		String data = atr.makeARFFFromSQL(sym, daysOut, parms, false);
 		File file = new File(getFilename(sym, daysOut));
 		PrintWriter pw = new PrintWriter(file);
 		pw.print(data);
@@ -134,43 +68,37 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 		pw.close();
 	}
 
-	public static String getFilename(String sym, int daysOut) {
-		return "c:/users/joe/correlationARFF/" + sym + "_" + daysOut + "_smi2_correlation.arff";
+	public static String getFilename(String sym, int dos) {
+		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_atr2_correlation.arff";
 	}
 
 	@Override
 	public AttributeParm buildParameters(String sym, int daysOut, Connection conn) throws Exception {
-		SMIParms parms = new SMIParms();
+		Core core = new Core();
+		DMIParms parms = new DMIParms();
 
-		PreparedStatement ps = conn.prepareStatement("select * from sm_correlation" + (makeWith30Days ? "" : "_130")
-				+ " where symbol=?  and  toCloseDays=?");
-
+		PreparedStatement ps = conn.prepareStatement("select * from atr_correlation" + (makeWith30Days ? "" : "_130")
+				+ " where symbol=? and toCloseDays=?  ");
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
-
 		while (rs.next()) {
-
 			String functionSymbol = rs.getString("functionSymbol");
-
-			GetETFDataUsingSQL pgsd = GetETFDataUsingSQL.getInstance(functionSymbol);
-
-			int hiLowPeriod = rs.getInt("hiLowPeriod");
-			int maPeriod = rs.getInt("maPeriod");
-			int smSmoothPeriod = rs.getInt("smSmoothPeriod");
-			int smSignalPeriod = rs.getInt("smSignalPeriod");
-			StochasticMomentum sm = new StochasticMomentum(pgsd.inHigh, pgsd.inLow, pgsd.inClose, hiLowPeriod,
-					MAType.Ema, maPeriod, smSmoothPeriod, smSignalPeriod);
+			GetETFDataUsingSQL gsdDMI = GetETFDataUsingSQL.getInstance(functionSymbol);
+			int atrPeriod = rs.getInt("atrPeriod");
+			double atr[] = new double[gsdDMI.inClose.length];
+			MInteger outBegIdx = new MInteger();
+			MInteger outNBElement = new MInteger();
+			core.atr(0, gsdDMI.inClose.length - 1, gsdDMI.inHigh, gsdDMI.inLow, gsdDMI.inClose, atrPeriod, outBegIdx,
+					outNBElement, atr);
+			Realign.realign(atr, outBegIdx.value);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
-
 			parms.addSymbol(symKey);
-			parms.setSMIs(symKey, sm);
+			parms.setDMIs(symKey, atr);
 			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
 			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
-			parms.setDateIndex(symKey, pgsd.dateIndex);
-
+			parms.setDateIndex(symKey, gsdDMI.dateIndex);
 		}
-
 		return parms;
 	}
 
@@ -179,24 +107,16 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 			throws Exception {
 
 		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-
-		int pos = 35 + daysOut;
-		String startDate = gsd.inDate[pos];
 		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
-
+		int pos = 25 + daysOut;
+		String startDate = gsd.inDate[pos];
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
-		pw.println("% 1. Title: " + sym + "_smi_correlation");
+		pw.println("% 1. Title: " + sym + "_atr_correlation");
 		pw.println("@RELATION " + sym + "_" + daysOut);
-
 		for (String symKey : parms.keySet()) {
-
-			pw.println("@ATTRIBUTE " + symKey + "smi NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "signal NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "smi2 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "signal2 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "smi3 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "signal3 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "atr NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "atrBack NUMERIC");
 			if (startDate.compareTo(parms.getDateIndex(symKey).firstKey()) < 0)
 				startDate = parms.getDateIndex(symKey).firstKey();
 		}
@@ -207,13 +127,15 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 			pw.println(db.getAttributeDefinition());
 
 		pw.println("@DATA");
-		int lines = 0;
+
 		while (gsd.inDate[pos].compareTo(startDate) < 0)
 			pos++;
 		pos += 20;
+		int lines = 0;
 		int largeGroupCnt = -1;
 		int positiveCount = 0;
 		int negativeCount = 0;
+
 		skipDay: for (int npPos = pos; npPos < gsd.inDate.length - daysOut - 1; npPos++) {
 			nextKey: for (String key : parms.keySet()) {
 
@@ -288,7 +210,6 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 				lines++;
 			}
 		}
-
 		return sw.toString();
 	}
 
@@ -296,24 +217,15 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 	public String makeARFFFromSQLForQuestionMark(String sym, int daysOut, AttributeParm parms) throws Exception {
 
 		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-
-		int pos = 35 + daysOut;
-
 		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
 
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
-		pw.println("% 1. Title: " + sym + "_smi_correlation");
+		pw.println("% 1. Title: " + sym + "_atr_correlation");
 		pw.println("@RELATION " + sym + "_" + daysOut);
-
 		for (String symKey : parms.keySet()) {
-
-			pw.println("@ATTRIBUTE " + symKey + "smi NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "signal NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "smi2 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "signal2 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "smi3 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "signal3 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "atr NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "atrBack NUMERIC");
 
 		}
 
@@ -323,44 +235,31 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 			pw.println(db.getAttributeDefinition());
 
 		pw.println("@DATA");
-		int iday = gsd.inDate.length - daysOut - 1;
+
+		int iday = gsd.inDate.length - 1;
 		StringBuffer sb = printAttributeData(iday, gsd.inDate, daysOut, parms, gsd.inClose, db, withAttributePosition,
 				true);
 		if (sb != null) {
 			pw.print(sb.toString());
 
 		}
+
 		return sw.toString();
 	}
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-	public String getAttributeText(StochasticMomentum sm, int smfunctionDaysDiff, int smstart, int daysOut,
-			int doubleBack) {
-		String ret = "";
-		int dorel = daysOut / 5;
-		dorel *= 2;
-		ret += sm.SMI[smstart - ((dorel) + doubleBack)];
-		ret += ",";
-		ret += sm.SMI[smstart - ((dorel) + doubleBack + 1)];
-		ret += ",";
-		ret += sm.SMI[smstart - ((dorel) + doubleBack + 2)];
-		ret += ",";
-		ret += sm.Signal[smstart - ((dorel) + doubleBack)];
-		ret += ",";
-		ret += sm.Signal[smstart - ((dorel) + doubleBack + 1)];
-		ret += ",";
-		ret += sm.Signal[smstart - ((dorel) + doubleBack + 2)];
-		ret += ",";
+	public String getAttributeText(double atr[], int atrfunctionDaysDiff, int atrstart, int doubleBack) {
+		return atr[atrstart - doubleBack] + "," + atr[atrstart - (atrfunctionDaysDiff + doubleBack)] + ",";
 
-		return ret;
 	}
 
 	public StringBuffer printAttributeData(int iday, String etfDates[], int daysOut, AttributeParm parms,
 			double[] closes, DeltaBands priceBands, boolean withAttributePosition, boolean forLastUseQuestionMark) {
+		StringBuffer returnBuffer = new StringBuffer(100);
 
-		StringBuffer returnBuffer = new StringBuffer(1000);
 		for (String key : parms.keySet()) {
+
 			int functionDaysDiff = parms.getDaysDiff(key);
 			Integer dateidx = parms.getDateIndex(key).get(etfDates[iday]);
 			if (dateidx == null)
@@ -376,11 +275,11 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 					}
 				}
 
-			StochasticMomentum smis = ((SMIParms) parms).getSMIs(key);
+			double atrs[] = ((DMIParms) parms).getDMIs(key);
 			Integer doubleBack = parms.getDoubleBacks(key);
 			if (doubleBack == null)
 				doubleBack = 0;
-			returnBuffer.append(getAttributeText(smis, functionDaysDiff, dateidx, daysOut, doubleBack.intValue()));
+			returnBuffer.append(getAttributeText(atrs, functionDaysDiff, dateidx, doubleBack.intValue()));
 		}
 		if (forLastUseQuestionMark)
 			returnBuffer.append("?");
@@ -389,6 +288,7 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 		else
 			returnBuffer.append(priceBands.getAttributeValue(iday, daysOut, closes));
 		returnBuffer.append("\n");
+
 		return returnBuffer;
 	}
 

@@ -168,9 +168,9 @@
     <fo:block text-indent='.333in' font-size='6.25pt'>1. Percentage change calculation uses the closing price on the day of the report
     divided into the closing price so many days out.  The abridged report found on the website performs a different calculation. The
     website report uses the closing prices average within the projected period.  This report uses the closing price for the projected day.</fo:block>
-    <fo:block text-indent='.333in' font-size='6.25pt'>2. A Buy indicator must have a value greater than 7.75. 
+    <fo:block text-indent='.333in' font-size='6.25pt'>2. A Buy indicator must have a value greater than 7.00. 
     Prior to 2021-08-26 the value was 6.75. </fo:block>
-    <fo:block text-indent='.333in' font-size='6.25pt'>3. A Sell indicator must have a value less than 1.25.
+    <fo:block text-indent='.333in' font-size='6.25pt'>3. A Sell indicator must have a value less than 2.00.
     Prior to 2021-08-26 the sell value was 2.25.  </fo:block>
      
     <fo:block text-indent='.333in' font-size='6.25pt'>4. Category by ETFs Report - </fo:block>
@@ -190,6 +190,26 @@
       
   <fo:block text-indent='.333in' font-size='6.25pt'>7. Added new model that uses the errors of previous guesses as an attribute.
       2021-05-20
+   </fo:block>
+      
+ 
+ <fo:block text-indent='.333in' font-size='6.25pt'>8. Corrected error in computing total average.
+      2021-09-21
+   </fo:block>
+      
+ <fo:block text-indent='.333in' font-size='6.25pt'>9. Added six addtional ETFs to the scan
+      2022-01-03
+      <fo:block text-indent='.66in' font-size='6.25pt'>$CHAU, $LABD, $LABU, $NAIL, $SPUU, and $XLRE.</fo:block>
+   </fo:block>
+      
+   <fo:block text-indent='.333in' font-size='6.25pt'>10. Implemented new Phase 2 logic;   
+     simplifying the source code.
+      2022-01-29
+   </fo:block>
+      
+   
+  <fo:block text-indent='.333in' font-size='6.25pt'>11. Added double balanced instances.   
+          2022-02-17
    </fo:block>
       
    

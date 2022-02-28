@@ -16,7 +16,7 @@ import com.tictactec.ta.lib.MAType;
 
 import bands.DeltaBands;
 import correlation.MAAvgParms;
-import correlation.MALinesMakeARFFfromSQLPhase2;
+import correlation.MALinesMakeARFFfromSQL;
 import correlation.MaLineParmToPass;
 import movingAvgAndLines.MovingAvgAndLineIntercept;
 import util.Averager;
@@ -48,7 +48,7 @@ public class ReportUsingMALines {
 		String lastSym = "";
 		// PriceBands priceBands = null;
 		DeltaBands priceBands = null;
-		MALinesMakeARFFfromSQLPhase2 makeSQL = new MALinesMakeARFFfromSQLPhase2(false);
+		MALinesMakeARFFfromSQL makeSQL = new MALinesMakeARFFfromSQL(false);
 		while ((inmaLinesLine = maLinesBR.readLine()) != null) {
 
 			String inmaLinesData[] = inmaLinesLine.split("_");
@@ -121,8 +121,7 @@ public class ReportUsingMALines {
 				MaLineParmToPass ptp = new MaLineParmToPass(mal, pgsd.inClose, null);
 				maap.addSymbol(symKey);
 				maap.setMALI(symKey, ptp);
-				maap.setAttrDates(symKey, pgsd.inDate);
-				maap.setLastDateStart(symKey, 200);
+				maap.setDateIndex(symKey, pgsd.dateIndex);
 				maLinesPW.println("@ATTRIBUTE " + symKey + "maLines1 NUMERIC");
 				maLinesPW.println("@ATTRIBUTE " + symKey + "maLines2 NUMERIC");
 				maLinesPW.println("@ATTRIBUTE " + symKey + "maLines3 NUMERIC");

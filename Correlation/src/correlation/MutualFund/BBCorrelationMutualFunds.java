@@ -159,12 +159,13 @@ public class BBCorrelationMutualFunds implements Runnable {
 									ArrayList<String> dates = mfdates.get(mfSym);
 
 									{
-										for (int doubleBack = 0; doubleBack < 5; doubleBack++) {
+										for (int doubleBack = 1; doubleBack <= 5; doubleBack++) {
 											ArrayList<Double> ccArray1 = new ArrayList<Double>(),
 													ccArray2 = new ArrayList<Double>();
 
-											for (int mfDateIdx = 50, mfDateIndex = 50; mfDateIdx < bbGSD.inDate.length
-													- priceDaysDiff & mfDateIndex < dates.size() - priceDaysDiff;) {
+											for (int mfDateIdx = 50,
+													mfDateIndex = 50; mfDateIdx < bbGSD.inDate.length - priceDaysDiff
+															& mfDateIndex < dates.size() - priceDaysDiff;) {
 												int dateCompare = bbGSD.inDate[mfDateIdx]
 														.compareTo(dates.get(mfDateIndex));
 												if (dateCompare < 0) {

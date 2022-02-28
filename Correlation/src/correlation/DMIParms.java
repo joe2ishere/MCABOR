@@ -7,8 +7,7 @@ public class DMIParms implements AttributeParm {
 	public class DMISymbolParm {
 		Integer functionDaysDiff;
 		Integer doubleBacks;
-		String[] dates;
-		int lastDateStart;
+		TreeMap<String, Integer> dateIndex;
 		double[] DMIs;
 	}
 
@@ -26,7 +25,7 @@ public class DMIParms implements AttributeParm {
 	@Override
 	public void addSymbol(String sym) {
 		DMIPMap.put(sym, new DMISymbolParm());
-		DMIPMap.get(sym).lastDateStart = 0;
+
 	}
 
 	@Override
@@ -58,23 +57,15 @@ public class DMIParms implements AttributeParm {
 	}
 
 	@Override
-	public String[] getAttrDates(String sym) {
-		return DMIPMap.get(sym).dates;
+	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
+		DMIPMap.get(sym).dateIndex = dateIndex;
+
 	}
 
 	@Override
-	public void setAttrDates(String sym, String dates[]) {
-		DMIPMap.get(sym).dates = dates;
-	}
+	public TreeMap<String, Integer> getDateIndex(String sym) {
 
-	@Override
-	public int getLastDateStart(String sym) {
-		return DMIPMap.get(sym).lastDateStart;
-	}
-
-	@Override
-	public void setLastDateStart(String sym, int start) {
-		DMIPMap.get(sym).lastDateStart = start;
+		return DMIPMap.get(sym).dateIndex;
 	}
 
 }

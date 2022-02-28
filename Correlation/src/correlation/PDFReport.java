@@ -23,11 +23,11 @@ public class PDFReport {
 	public static void main(String args[]) throws Exception {
 		LogManager.getLogManager().reset();
 		FileInputStream fis = new FileInputStream("xmlFilesForPDFReports/Report-FO2.xml");
-		makeReport(fis, "test");
+		makeReport(fis, "test", "test");
 
 	}
 
-	static String makeReport(InputStream is, String rptDate) throws Exception {
+	static String makeReport(InputStream is, String rptDate, String version) throws Exception {
 
 		FopFactory fopFactory = FopFactory.newInstance(new File("xmlFilesForPDFReports/fop.xconf"));
 
@@ -35,7 +35,7 @@ public class PDFReport {
 		// Note: Using BufferedOutputStream for performance reasons (helpful with
 		// FileOutputStreams).
 
-		String reportName = "c:/users/joe/correlationOutput/report_" + rptDate + ".pdf";
+		String reportName = "c:/users/joe/correlationOutput/report_" + version + rptDate + ".pdf";
 		OutputStream out = new BufferedOutputStream(new FileOutputStream(reportName));
 
 		try {

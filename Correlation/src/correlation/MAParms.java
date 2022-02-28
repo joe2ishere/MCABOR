@@ -3,68 +3,69 @@ package correlation;
 import java.util.Set;
 import java.util.TreeMap;
 
-public class TSFParms implements AttributeParm {
-	public class TSFSymbolParm {
+public class MAParms implements AttributeParm {
+	public class MASymbolParm {
 		Integer functionDaysDiff;
 		Integer doubleBacks;
 		TreeMap<String, Integer> dateIndex;
-		double[] tsfs;
+		double[] MAs;
 	}
 
-	TreeMap<String, TSFSymbolParm> TSFPMap;
+	TreeMap<String, MASymbolParm> MAPMap;
 
-	public TSFParms() {
-		TSFPMap = new TreeMap<String, TSFSymbolParm>();
+	public MAParms() {
+		MAPMap = new TreeMap<String, MASymbolParm>();
 	}
 
 	@Override
 	public Set<String> keySet() {
-		return TSFPMap.keySet();
+		return MAPMap.keySet();
 	}
 
 	@Override
 	public void addSymbol(String sym) {
-		TSFPMap.put(sym, new TSFSymbolParm());
+		MAPMap.put(sym, new MASymbolParm());
 
 	}
 
 	@Override
 	public Integer getDaysDiff(String sym) {
-		return TSFPMap.get(sym).functionDaysDiff;
+		return MAPMap.get(sym).functionDaysDiff;
 	}
 
 	@Override
 	public void setDaysDiff(String sym, Integer daysDiff) {
-		TSFPMap.get(sym).functionDaysDiff = daysDiff;
+		MAPMap.get(sym).functionDaysDiff = daysDiff;
 	}
 
 	@Override
 	public Integer getDoubleBacks(String sym) {
-		return TSFPMap.get(sym).doubleBacks;
+		return MAPMap.get(sym).doubleBacks;
 	}
 
 	@Override
 	public void setDoubleBacks(String sym, Integer doubleBacks) {
-		TSFPMap.get(sym).doubleBacks = doubleBacks;
+		MAPMap.get(sym).doubleBacks = doubleBacks;
 	}
 
-	public double[] gettsfs(String sym) {
-		return TSFPMap.get(sym).tsfs;
+	public double[] getMAs(String sym) {
+		return MAPMap.get(sym).MAs;
 	}
 
-	public void settsfs(String sym, double[] tsfs) {
-		TSFPMap.get(sym).tsfs = tsfs;
+	public void setMAs(String sym, double[] MAs) {
+		MAPMap.get(sym).MAs = MAs;
 	}
 
 	@Override
 	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
-		TSFPMap.get(sym).dateIndex = dateIndex;
+		MAPMap.get(sym).dateIndex = dateIndex;
 
 	}
 
 	@Override
 	public TreeMap<String, Integer> getDateIndex(String sym) {
 
-		return TSFPMap.get(sym).dateIndex;
+		return MAPMap.get(sym).dateIndex;
 	}
+
 }

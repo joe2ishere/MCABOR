@@ -1,6 +1,7 @@
 package correlation;
 
 import java.util.Set;
+import java.util.TreeMap;
 
 public interface AttributeParm {
 
@@ -8,13 +9,9 @@ public interface AttributeParm {
 
 	public void addSymbol(String sym);
 
-	public String[] getAttrDates(String sym);
+	public TreeMap<String, Integer> getDateIndex(String sym);
 
-	public void setAttrDates(String sym, String dates[]);
-
-	public int getLastDateStart(String sym);
-
-	public void setLastDateStart(String sym, int start);
+	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex);
 
 	public Integer getDaysDiff(String sym);
 
@@ -23,4 +20,5 @@ public interface AttributeParm {
 	public Integer getDoubleBacks(String sym);
 
 	public void setDoubleBacks(String sym, Integer doubleBacks);
+
 }

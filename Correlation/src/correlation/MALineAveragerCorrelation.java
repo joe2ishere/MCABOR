@@ -64,6 +64,9 @@ public class MALineAveragerCorrelation implements Runnable {
 				continue;
 			if (cu.doneList.contains(MASym))
 				continue;
+//			if (cu.tooHigh.contains(MASym))
+//				continue;
+
 			System.out.println("running " + MASym);
 			for (int maPeriod = 2; maPeriod <= 21; maPeriod += 2) {
 				for (MAType type : types) {

@@ -49,7 +49,7 @@ public class ReportUsingMACD {
 		String lastSym = "";
 		// PriceBands priceBands = null;
 		DeltaBands priceBands = null;
-		MACDMakeARFFfromSQL makeFromSQL = new MACDMakeARFFfromSQL(false);
+		MACDMakeARFFfromSQL makeFromSQL = new MACDMakeARFFfromSQL(false, false);
 		while ((inMACDLine = macdBR.readLine()) != null) {
 			String inMACDData[] = inMACDLine.split("_");
 
@@ -183,8 +183,8 @@ public class ReportUsingMACD {
 						pos++;
 					}
 
-					makeFromSQL.printAttributeData(iday, daysOut, macdPW, macds, macdDaysDiff, macdDoubleBacks,
-							arraypos, dcloses, priceBands, false);
+//					makeFromSQL.printAttributeData(iday, daysOut, macdPW, macds, macdDaysDiff, macdDoubleBacks,
+//							arraypos, dcloses, priceBands, false);
 
 					pos = 0;
 					for (pos = 0; pos < arraypos.length; pos++) {
@@ -217,7 +217,7 @@ public class ReportUsingMACD {
 //							System.out.println("\n" + daysOut + " using " + macdDates.get(key)[macdstart] + "; for ;"
 //									+ (daysOut - (iday - 1)));
 						;
-						pwtest.print(makeFromSQL.getAttributeText(macd, macddaysdiff, macdstart, doubleBack) + ",");
+//						pwtest.print(makeFromSQL.getAttributeText(macd, macddaysdiff, macdstart, doubleBack) + ",");
 						arraypos[pos]++;
 						pos++;
 

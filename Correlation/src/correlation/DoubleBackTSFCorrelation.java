@@ -36,9 +36,9 @@ public class DoubleBackTSFCorrelation implements Runnable {
 
 	}
 
-	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 180 days
-	// if 180 days then just a limited number of etfs are done.
-	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld"));
+	static boolean doingBigDayDiff = false; // if false just doing 30 days; otherwise 110 days
+	// if 110 days then just a limited number of etfs are done.
+	static ArrayList<String> bigDaysDiffList = new ArrayList<String>(Arrays.asList("qqq", "gld", "xle"));
 
 	public static void main(String[] args) throws Exception {
 
@@ -60,6 +60,7 @@ public class DoubleBackTSFCorrelation implements Runnable {
 
 			if (cu.doneList.contains(TSFSym))
 				continue;
+
 			GetETFDataUsingSQL gsdTSF = cu.gsds.get(TSFSym);
 			if (cu.symList.get(TSFSym) < cu.entryLimit)
 				continue;
@@ -109,8 +110,8 @@ public class DoubleBackTSFCorrelation implements Runnable {
 
 	}
 
-	File doneFile = new File("TSFDoubleDone" + (doingBigDayDiff ? "180Days" : "") + ".txt");
-	public static File tabFile = new File("TSFDoubleTaB" + (doingBigDayDiff ? "180Days" : "") + "txt");
+	File doneFile = new File("TSFDoubleDone" + (doingBigDayDiff ? "110Days" : "") + ".txt");
+	public static File tabFile = new File("TSFDoubleTaB" + (doingBigDayDiff ? "110Days" : "") + ".txt");
 
 	public void loadTables() {
 		if (doneFile.exists() == false)
@@ -226,10 +227,10 @@ public class DoubleBackTSFCorrelation implements Runnable {
 					}
 					GetETFDataUsingSQL closingGSD = cu.gsds.get(closingSymbol);
 
-					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 180
+					for (int pricefunctionDaysDiff = 1; pricefunctionDaysDiff <= (doingBigDayDiff ? 110
 							: 30); pricefunctionDaysDiff += 1) {
 
-						for (int TSFfunctionDaysDiff = 1; TSFfunctionDaysDiff <= 11; TSFfunctionDaysDiff += 3) {
+						for (int functionDaysDiff = 1; functionDaysDiff <= 7; functionDaysDiff += 2) {
 							{
 								/*
 								 * ccarray1 has to be computed here so the dates align correctly
@@ -242,7 +243,7 @@ public class DoubleBackTSFCorrelation implements Runnable {
 
 								int startTSFDay = tsfDayIndex;
 								int startClosingDay = closingDayIndex;
-								nextDD: for (int doubleBack = 0; doubleBack < 5; doubleBack += 1) {
+								nextDD: for (int doubleBack = 1; doubleBack <= 5; doubleBack++) {
 									ArrayList<Double> ccArray1 = new ArrayList<Double>();
 									ArrayList<Double> ccArray2 = new ArrayList<Double>();
 
@@ -268,7 +269,7 @@ public class DoubleBackTSFCorrelation implements Runnable {
 										ccArray1.add(closingGSD.inClose[closingDayIndex + pricefunctionDaysDiff]
 												/ closingGSD.inClose[closingDayIndex]);
 										ccArray2.add(q.TSFs[tsfDayIndex - (doubleBack)]
-												/ q.TSFs[tsfDayIndex - (TSFfunctionDaysDiff + doubleBack)]);
+												/ q.TSFs[tsfDayIndex - (functionDaysDiff + doubleBack)]);
 
 										tsfDayIndex++;
 
@@ -296,7 +297,7 @@ public class DoubleBackTSFCorrelation implements Runnable {
 											}
 										int setAt = tabBest.setTop(abscorr,
 												makeKey(closingSymbol, pricefunctionDaysDiff, qSymbol, q.TSFPeriod,
-														TSFfunctionDaysDiff, doubleBack, corr));
+														functionDaysDiff, doubleBack, corr));
 										if (setAt != -1) {
 											if (setAt > 0) {
 												for (int i = 0; i < setAt; i++) {

@@ -56,6 +56,9 @@ public class DoubleBackADXCorrelation implements Runnable {
 		for (String adxSym : cu.symList.keySet()) {
 			if (cu.doneList.contains(adxSym))
 				continue;
+			if (cu.tooHigh.contains(adxSym))
+				continue;
+
 			GetETFDataUsingSQL adxGSD = cu.gsds.get(adxSym);
 			if (cu.symList.get(adxSym) < cu.entryLimit)
 				continue;
@@ -235,7 +238,7 @@ public class DoubleBackADXCorrelation implements Runnable {
 								int startadxDay = adxDayIndex;
 								int startClosingDay = closingDayIndex;
 
-								for (int doubleBack = 0; doubleBack <= 5; doubleBack += 1) {
+								for (int doubleBack = 1; doubleBack <= 5; doubleBack++) {
 									ArrayList<Double> ccArray1 = new ArrayList<Double>();
 									ArrayList<Double> ccArray2 = new ArrayList<Double>();
 

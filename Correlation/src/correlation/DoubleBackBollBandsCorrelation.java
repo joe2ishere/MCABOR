@@ -61,6 +61,9 @@ public class DoubleBackBollBandsCorrelation implements Runnable {
 		for (String etfSymbol : cu.symList.keySet()) {
 			if (cu.doneList.contains(etfSymbol))
 				continue;
+			if (cu.tooHigh.contains(etfSymbol))
+				continue;
+
 			GetETFDataUsingSQL BollBandsGSD = cu.gsds.get(etfSymbol);
 
 			if (cu.symList.get(etfSymbol) < cu.entryLimit)
@@ -259,7 +262,7 @@ public class DoubleBackBollBandsCorrelation implements Runnable {
 								int startBollBandsDay = BollBandsDayIndex;
 								int startClosingDay = closingDayIndex;
 
-								for (int doubleBack = 0; doubleBack < 2; doubleBack += 1) {
+								for (int doubleBack = 1; doubleBack <= 5; doubleBack++) {
 									ArrayList<Double> ccArray1 = new ArrayList<Double>();
 									ArrayList<Double> ccArray2 = new ArrayList<Double>();
 

@@ -7,8 +7,7 @@ public class MAAvgParms implements AttributeParm {
 	public class MAAvgSymbolParm {
 		Integer functionDaysDiff;
 		Integer doubleBacks;
-		String[] dates;
-		int lastDateStart;
+		TreeMap<String, Integer> dateIndex;
 		MaLineParmToPass mali;
 	}
 
@@ -26,7 +25,7 @@ public class MAAvgParms implements AttributeParm {
 	@Override
 	public void addSymbol(String sym) {
 		MAAvgPMap.put(sym, new MAAvgSymbolParm());
-		MAAvgPMap.get(sym).lastDateStart = 0;
+
 	}
 
 	@Override
@@ -58,23 +57,14 @@ public class MAAvgParms implements AttributeParm {
 	}
 
 	@Override
-	public String[] getAttrDates(String sym) {
-		return MAAvgPMap.get(sym).dates;
+	public TreeMap<String, Integer> getDateIndex(String sym) {
+		return MAAvgPMap.get(sym).dateIndex;
 	}
 
 	@Override
-	public void setAttrDates(String sym, String dates[]) {
-		MAAvgPMap.get(sym).dates = dates;
-	}
+	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
+		MAAvgPMap.get(sym).dateIndex = dateIndex;
 
-	@Override
-	public int getLastDateStart(String sym) {
-		return MAAvgPMap.get(sym).lastDateStart;
-	}
-
-	@Override
-	public void setLastDateStart(String sym, int start) {
-		MAAvgPMap.get(sym).lastDateStart = start;
 	}
 
 }
