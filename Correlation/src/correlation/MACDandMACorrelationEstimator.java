@@ -25,7 +25,7 @@ public class MACDandMACorrelationEstimator extends CorrelationEstimator {
 		ma_makeSQL = new MAMakeARFFfromSQL(false, true);
 	}
 
-	public MACDandMACorrelationEstimator(Connection conn, boolean one80Mode) throws SQLException {
+	public MACDandMACorrelationEstimator(Connection conn, boolean thirtyDayMode) throws SQLException {
 		super(conn);
 		function = "macd_ma";
 	}

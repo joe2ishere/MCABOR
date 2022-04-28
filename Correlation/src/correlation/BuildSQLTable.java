@@ -1,12 +1,18 @@
 package correlation;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.logging.LogManager;
+import java.util.stream.Collectors;
 
 import util.getDatabaseConnection;
 
@@ -17,10 +23,12 @@ public class BuildSQLTable {
 
 	public static void main(String args[]) throws Exception {
 
-		atrmain(args);
+		apomain(args);
+//		atrmain(args);
 //		dmimain(args);
 //		malinemain(args);
 //		macdmain(args);
+//		psarmain(args);
 //		smimain(args);
 //		tsfmain(args);
 //		mamain(args);
@@ -34,6 +42,10 @@ public class BuildSQLTable {
 
 	}
 
+	public static List<String> getFileData(File file) throws IOException {
+		return Files.lines(Paths.get(file.getPath())).filter(x -> !x.contains("set")).collect(Collectors.toList());
+	}
+
 	public static void atrmain(String[] args) throws Exception {
 		Connection conn = getDatabaseConnection.makeConnection();
 
@@ -43,14 +55,10 @@ public class BuildSQLTable {
 				+ "(symbol, toCloseDays, significantPlace, functionSymbol, atrPeriod,  functionDaysDiff, doubleBack, correlation)"
 				+ " values (?,?,?,?,?,?,?,?)");
 
-		FileReader fr = new FileReader(DoubleBackATRCorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
+		List<String> inFileData = getFileData(DoubleBackATRCorrelation.tabFile);
 
 		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("set"))
-				continue;
+		for (String in : inFileData) {
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement(
@@ -77,6 +85,47 @@ public class BuildSQLTable {
 		conn.close();
 	}
 
+	public static void apomain(String[] args) throws Exception {
+		Connection conn = getDatabaseConnection.makeConnection();
+
+		LogManager.getLogManager().reset();
+
+		final PreparedStatement stInsert = conn.prepareStatement("insert into apo_correlation"
+				+ "(symbol, toCloseDays, significantPlace, functionSymbol, fastPeriod,  slowPeriod,  functionDaysDiff, doubleBack, correlation)"
+				+ " values (?,?,?,?,?,?,?,?,?)");
+
+		List<String> inFileData = getFileData(DoubleBackAPOCorrelation.tabFile);
+
+		conn.setAutoCommit(false);
+		for (String in : inFileData) {
+			if (in.contains("_")) {
+				String ins[] = in.split("_");
+				PreparedStatement stDelete = conn.prepareStatement(
+						"delete from apo_correlation" + " where symbol = '" + ins[0] + "' and toCloseDays = " + ins[1]);
+				stDelete.execute();
+				continue;
+			}
+			String inColon[] = in.split(":");
+			String keyIn = inColon[2];
+			stInsert.setString(1, DoubleBackAPOCorrelation.getCloseSym(keyIn));
+
+			stInsert.setInt(2, DoubleBackAPOCorrelation.getPricefunctionDaysDiff(keyIn));
+			stInsert.setInt(3, Integer.parseInt(inColon[0]));
+			stInsert.setString(4, DoubleBackAPOCorrelation.getfunctionSymbol(keyIn));
+			stInsert.setInt(5, DoubleBackAPOCorrelation.getFastPeriod(keyIn));
+			stInsert.setInt(6, DoubleBackAPOCorrelation.getSlowPeriod(keyIn));
+			stInsert.setInt(7, DoubleBackAPOCorrelation.getFunctionDaysDiff(keyIn));
+			stInsert.setInt(8, DoubleBackAPOCorrelation.getDoubleBack(keyIn));
+			stInsert.setDouble(9, DoubleBackAPOCorrelation.getCorr(keyIn));
+			stInsert.addBatch();
+		}
+		stInsert.executeBatch();
+		stInsert.close();
+		conn.commit();
+		conn.close();
+
+	}
+
 	public static void dmimain(String[] args) throws Exception {
 		Connection conn = getDatabaseConnection.makeConnection();
 
@@ -86,14 +135,10 @@ public class BuildSQLTable {
 				+ "(symbol, toCloseDays, significantPlace, functionSymbol, dmiPeriod,  functionDaysDiff, doubleBack, correlation)"
 				+ " values (?,?,?,?,?,?,?,?)");
 
-		FileReader fr = new FileReader(DoubleBackDMICorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
+		List<String> inFileData = getFileData(DoubleBackDMICorrelation.tabFile);
 
 		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("set"))
-				continue;
+		for (String in : inFileData) {
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement(
@@ -175,15 +220,10 @@ public class BuildSQLTable {
 				+ "smSmoothPeriod, smSignalPeriod, functionDaysDiff, doubleBack, correlation)"
 				+ " values (?,?,?,?,?,?,?,?,?,?,?)");
 
-		FileReader fr = new FileReader(DoubleBackSMICorrelation.tabFile);
-		@SuppressWarnings("resource")
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
+		List<String> inFileData = getFileData(DoubleBackSMICorrelation.tabFile);
 
 		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("set"))
-				continue;
+		for (String in : inFileData) {
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement(
@@ -282,14 +322,10 @@ public class BuildSQLTable {
 				+ "(symbol,   toCloseDays, significantPlace, functionSymbol, fastPeriod, slowPeriod, signalPeriod, functionDaysDiff,  doubleBack, correlation)"
 				+ " values (?,?,?,?,?,?,?,?,?,?)");
 
-		FileReader fr = new FileReader(DoubleBackMACDCorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
+		List<String> inFileData = getFileData(DoubleBackMACDCorrelation.tabFile);
 
 		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("set"))
-				continue;
+		for (String in : inFileData) {
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement("delete from macd_correlation" + " where symbol = '"
@@ -373,14 +409,10 @@ public class BuildSQLTable {
 				+ "(symbol,   toCloseDays, significantPlace, functionSymbol, period, maType,   correlation)"
 				+ " values (?,?,?,?,?,?,?)");
 
-		FileReader fr = new FileReader(MALineCorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
+		List<String> inFileData = getFileData(MALineCorrelation.tabFile);
 
 		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("set"))
-				continue;
+		for (String in : inFileData) {
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement("delete from maline_correlation"
@@ -406,47 +438,45 @@ public class BuildSQLTable {
 		conn.close();
 	}
 
-//	public static void ppomain(String[] args) throws Exception {
-//		Connection conn = getDatabaseConnection.makeConnection();
-//
-//		LogManager.getLogManager().reset();
-//
-//		final PreparedStatement stInsert = conn.prepareStatement("insert into ppo_correlation"
-//				+ "(symbol,  toCloseDays, significantPlace, ppoSymbol, fastPeriod, slowPeriod,   functionDaysDiff,doubleBack, correlation)"
-//				+ " values (?,?,?,?,?,?,?,?,?)");
-//
-//		FileReader fr = new FileReader(DoubleBackPPOCorrelation.tabFile);
-//		BufferedReader br = new BufferedReader(fr);
-//		String in = "";
-//
-//		conn.setAutoCommit(false);
-//		while ((in = br.readLine()) != null) {
-//			if (in.contains("_")) {
-//				String ins[] = in.split("_");
-//				PreparedStatement stDelete = conn.prepareStatement(
-//						"delete from ppo_correlation" + " where symbol = '" + ins[0] + "' and toCloseDays = " + ins[1]);
-//				stDelete.execute();
-//				continue;
-//			}
-//			String inColon[] = in.split(":");
-//			String keyIn = inColon[2];
-//			stInsert.setString(1, PPOCorrelation.closeSym(keyIn));
-//
-//			stInsert.setInt(2, PPOCorrelation.pricefunctionDaysDiff(keyIn));
-//			stInsert.setInt(3, Integer.parseInt(inColon[0]));
-//			stInsert.setString(4, PPOCorrelation.ppoSym(keyIn));
-//			stInsert.setInt(5, PPOCorrelation.fastPeriod(keyIn));
-//			stInsert.setInt(6, PPOCorrelation.slowPeriod(keyIn));
-//			stInsert.setInt(7, PPOCorrelation.ppoBack(keyIn));
-//			stInsert.setInt(8, PPOCorrelation.getDoubleBack(keyIn));
-//			stInsert.setDouble(9, PPOCorrelation.corr(keyIn));
-//			stInsert.addBatch();
-//		}
-//		stInsert.executeBatch();
-//		stInsert.close();
-//		conn.commit();
-//		conn.close();
-//	}
+	public static void psarmain(String[] args) throws Exception {
+		Connection conn = getDatabaseConnection.makeConnection();
+
+		LogManager.getLogManager().reset();
+
+		final PreparedStatement stInsert = conn.prepareStatement("insert into psar_correlation"
+				+ "(symbol,  toCloseDays, significantPlace, functionSymbol, acceleration, maximum,   functionDaysDiff,doubleBack, correlation)"
+				+ " values (?,?,?,?,?,?,?,?,?)");
+
+		List<String> inFileData = getFileData(DoubleBackPSARCorrelation.tabFile);
+
+		conn.setAutoCommit(false);
+		for (String in : inFileData) {
+			if (in.contains("_")) {
+				String ins[] = in.split("_");
+				PreparedStatement stDelete = conn.prepareStatement("delete from psar_correlation" + " where symbol = '"
+						+ ins[0] + "' and toCloseDays = " + ins[1]);
+				stDelete.execute();
+				continue;
+			}
+			String inColon[] = in.split(":");
+			String keyIn = inColon[2];
+			stInsert.setString(1, DoubleBackPSARCorrelation.getCloseSym(keyIn));
+
+			stInsert.setInt(2, DoubleBackPSARCorrelation.getFunctionDaysDiff(keyIn));
+			stInsert.setInt(3, Integer.parseInt(inColon[0]));
+			stInsert.setString(4, DoubleBackPSARCorrelation.getFunctionSymbol(keyIn));
+			stInsert.setDouble(5, DoubleBackPSARCorrelation.getAcceleration(keyIn));
+			stInsert.setDouble(6, DoubleBackPSARCorrelation.getMaximum(keyIn));
+			stInsert.setInt(7, DoubleBackPSARCorrelation.getDaysDiff(keyIn));
+			stInsert.setInt(8, DoubleBackPSARCorrelation.getDoubleBack(keyIn));
+			stInsert.setDouble(9, DoubleBackPSARCorrelation.getCorr(keyIn));
+			stInsert.addBatch();
+		}
+		stInsert.executeBatch();
+		stInsert.close();
+		conn.commit();
+		conn.close();
+	}
 
 	public static void tsfmain(String[] args) throws Exception {
 		Connection conn = getDatabaseConnection.makeConnection();
@@ -457,14 +487,10 @@ public class BuildSQLTable {
 				+ "(symbol, toCloseDays, significantPlace, functionSymbol, tsfPeriod,  functionDaysDiff, doubleBack, correlation)"
 				+ " values (?,?,?,?,?,?,?,?)");
 
-		FileReader fr = new FileReader(DoubleBackTSFCorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
+		List<String> inFileData = getFileData(DoubleBackTSFCorrelation.tabFile);
 
 		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("set"))
-				continue;
+		for (String in : inFileData) {
 
 			if (in.contains("_")) {
 
@@ -548,13 +574,10 @@ public class BuildSQLTable {
 				+ " values (?,?,?,?,?,?,?,?,?)");
 
 		FileReader fr = new FileReader(DoubleBackMACorrelation.tabFile);
-		BufferedReader br = new BufferedReader(fr);
-		String in = "";
+		List<String> inFileData = getFileData(DoubleBackMACorrelation.tabFile);
 
 		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			if (in.contains("set"))
-				continue;
+		for (String in : inFileData) {
 			if (in.contains("_")) {
 				String ins[] = in.split("_");
 				PreparedStatement stDelete = conn.prepareStatement(

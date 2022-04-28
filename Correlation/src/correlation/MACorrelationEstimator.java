@@ -13,7 +13,7 @@ public class MACorrelationEstimator extends CorrelationEstimator {
 		makeSQL = new MAMakeARFFfromSQL(false, true);
 	}
 
-	public MACorrelationEstimator(Connection conn, boolean one80Mode) throws SQLException {
+	public MACorrelationEstimator(Connection conn, boolean thirtyDayMode) throws SQLException {
 		super(conn);
 		function = "ma";
 	}

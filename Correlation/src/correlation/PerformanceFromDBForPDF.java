@@ -26,14 +26,14 @@ public class PerformanceFromDBForPDF {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 		Calendar cd = Calendar.getInstance();
 
-		makeReport(sdf.format(cd.getTime()));
+		makeReport(sdf.format(cd.getTime()) + "T");
 	}
 
 	public static String makeReport(String currentMktDate) throws Exception {
 
 		Connection conn = getDatabaseConnection.makeConnection();
 		PreparedStatement psGetDates = conn
-				.prepareStatement("select distinct mktDate from correlation30days order by mktDate desc limit 40 ");
+				.prepareStatement("select distinct mktDate from correlation30days order by mktDate desc limit 33 ");
 		ArrayList<String> mktDates = new ArrayList<>();
 		ResultSet rsMktDates = psGetDates.executeQuery();
 		while (rsMktDates.next()) {
@@ -221,6 +221,10 @@ public class PerformanceFromDBForPDF {
 
 		allText = allText.replace("<!--   <<<<% correct for calls for date>>>> -->", sb.toString());
 		allText = allText.replace("<<<<Current Report Date>>>>", rptDate);
+		allText = allText.replace("<<<<DAILY RECOMMENDATION REQUIREMENT>>>>",
+				"An ETF must have a daily score of less than " + CorrelationEstimator.sellIndicatorLimit
+						+ "% for a sell signal or greater than " + CorrelationEstimator.buyIndicatorLimit
+						+ "% for a buy signal.");
 		sb = new StringBuffer(1000);
 		for (String key : allSheetsDaysAverage.keySet()) {
 			TreeMap<Integer, Averager> sheetDaysAverage = allSheetsDaysAverage.get(key);

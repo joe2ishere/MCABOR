@@ -9,7 +9,7 @@ public class MALinesCorrelationEstimator extends CorrelationEstimator {
 
 	public MALinesCorrelationEstimator(Connection conn) throws SQLException {
 		super(conn);
-		function = "mali2";
+		function = "mali";
 		makeSQL = new MALinesMakeARFFfromSQL(false);
 
 	}

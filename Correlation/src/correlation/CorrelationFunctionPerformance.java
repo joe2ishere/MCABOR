@@ -45,10 +45,13 @@ public class CorrelationFunctionPerformance {
 	static String filename = "c:/users/joe/correlationOutput/correlationFunctionPerformance.csv";
 
 	public static TreeMap<String, ArrayList<Averager>> loadFromFile() throws Exception {
-		BufferedReader br = new BufferedReader(new FileReader(filename));
+		File f = new File(filename);
+
 		String in;
 		TreeMap<String, ArrayList<Averager>> functionDayAverager = new TreeMap<>();
-
+		if (f.exists() == false)
+			return functionDayAverager;
+		BufferedReader br = new BufferedReader(new FileReader(filename));
 		while ((in = br.readLine()) != null) {
 			String ins[] = in.split(";");
 			ArrayList<Averager> newList = new ArrayList<>();
@@ -124,12 +127,8 @@ public class CorrelationFunctionPerformance {
 			for (String sym : symbols) {
 				GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
 
-				int dtPosition = gsd.inDate.length;
-				do {
-					dtPosition--;
-				} while (gsd.inDate[dtPosition].compareTo(mktDate) > 0);
+				int dtPosition = gsd.dateIndex.get(mktDate);
 
-				dtPosition--;
 				if (dtPosition + daysOut >= gsd.inDate.length)
 					continue rsDates;
 
@@ -144,7 +143,11 @@ public class CorrelationFunctionPerformance {
 //						"compare " + gsd.inDate[dtPosition + daysOut] + "to" + gsd.inDate[dtPosition] + " " + daysOut);
 				boolean buy = gsd.inClose[dtPosition + daysOut] > gsd.inClose[dtPosition];
 				for (String function : functions) {
-					ArrayList<Averager> averages = functionDayAverager.get(function);
+					String func = function;
+					if (func.endsWith("2"))
+						func = func.substring(0, func.length() - 1);
+
+					ArrayList<Averager> averages = functionDayAverager.get(func);
 					PreparedStatement getResults = conn.prepareStatement("select guess from correlationfunctionresults"
 							+ d + " where symbol = '" + sym + "' and " + " function = '" + function
 							+ "' and mktDate = '" + mktDate + "' and daysOut = " + daysOut);
@@ -154,14 +157,14 @@ public class CorrelationFunctionPerformance {
 						continue;
 					}
 					double guess = rsResults.getDouble(1);
-					if (guess >= 7) {
+					if (guess >= CorrelationEstimator.buyIndicatorLimit) {
 //						if (function.compareTo("Bad") == 0)
 //							System.out.println("at bad guess");
 						if (buy)
 							averages.get(daysOut).add(1);
 						else
 							averages.get(daysOut).add(0);
-					} else if (guess <= 2) {
+					} else if (guess <= CorrelationEstimator.sellIndicatorLimit) {
 //						if (function.compareTo("Bad") == 0)
 //							System.out.println("at bad guess");
 						if (!buy)
@@ -188,32 +191,6 @@ public class CorrelationFunctionPerformance {
 
 		return functionDayAverager;
 
-	}
-
-	public static void updateResultsTable(Connection conn, File resultsForDBFile2) throws Exception {
-
-		BufferedReader br = new BufferedReader(new FileReader(resultsForDBFile2));
-		String in;
-		conn.setAutoCommit(false);
-		while ((in = br.readLine()) != null) {
-			String ins[] = in.split(";");
-
-			PreparedStatement updateFunctionResults = conn.prepareStatement(
-					"insert into correlationfunctionresults" + " (symbol, function, mktDate, daysOut, guess) "
-							+ " values(?,?,?,?,?) " + " on duplicate key update guess=? ");
-			updateFunctionResults.setString(1, ins[0]);
-			updateFunctionResults.setString(2, ins[1]);
-			updateFunctionResults.setString(3, ins[2]);
-			updateFunctionResults.setInt(4, Integer.parseInt(ins[3]));
-			updateFunctionResults.setDouble(5, Double.parseDouble(ins[4]));
-			updateFunctionResults.setDouble(6, Double.parseDouble(ins[4]));
-			updateFunctionResults.execute();
-		}
-
-		conn.commit();
-		conn.setAutoCommit(true);
-
-		br.close();
 	}
 
 }

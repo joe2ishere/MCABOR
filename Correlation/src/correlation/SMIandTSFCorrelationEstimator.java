@@ -12,32 +12,32 @@ import weka.classifiers.Classifier;
 import weka.classifiers.lazy.IBk;
 import weka.core.Instances;
 
-public class ATRandMACDCorrelationEstimator extends CorrelationEstimator {
+public class SMIandTSFCorrelationEstimator extends CorrelationEstimator {
 
-	ATRMakeARFFfromSQL atr_makeSQL;
-	MACDMakeARFFfromSQL macd_makeSQL;
+	SMMakeARFFfromSQL smi_makeSQL;
+	TSFMakeARFFfromSQL tsf_makeSQL;
 
-	public ATRandMACDCorrelationEstimator(Connection conn) throws SQLException {
+	public SMIandTSFCorrelationEstimator(Connection conn) throws SQLException {
 		super(conn);
-		function = "atr_macd";
-		makeSQL = new ATRandMACDMakeARFFfromSQL(false, true);
-		atr_makeSQL = new ATRMakeARFFfromSQL(false, true);
-		macd_makeSQL = new MACDMakeARFFfromSQL(false, true);
+		function = "smi_tsf";
+		makeSQL = new SMIandTSFMakeARFFfromSQL(false, true);
+		smi_makeSQL = new SMMakeARFFfromSQL(false, true);
+		tsf_makeSQL = new TSFMakeARFFfromSQL(false, true);
 	}
 
-	public ATRandMACDCorrelationEstimator(Connection conn, boolean thirtyDayMode) throws SQLException {
+	public SMIandTSFCorrelationEstimator(Connection conn, boolean thirtyDayMode) throws SQLException {
 		super(conn);
-		function = "atr_macd";
+		function = "smi_tsf";
 	}
 
 	@Override
 	public double prun() throws Exception {
-		AttributeParm atrParms = null;
-		AttributeParm macdParms = null;
+		AttributeParm smiParms = null;
+		AttributeParm tsfParms = null;
 
 		try {
-			atrParms = atr_makeSQL.buildParameters(sym, daysOut, conn);
-			macdParms = macd_makeSQL.buildParameters(sym, daysOut, conn);
+			smiParms = smi_makeSQL.buildParameters(sym, daysOut, conn);
+			tsfParms = tsf_makeSQL.buildParameters(sym, daysOut, conn);
 		} catch (Exception e1) {
 			e1.printStackTrace();
 			System.exit(0);
@@ -71,7 +71,7 @@ public class ATRandMACDCorrelationEstimator extends CorrelationEstimator {
 					$instances = builder.toString();
 				}
 			} else {
-				$instances = makeSQL.makeARFFFromSQL(sym, daysOut, atrParms, macdParms, whichHalf);
+				$instances = makeSQL.makeARFFFromSQL(sym, daysOut, smiParms, tsfParms, whichHalf);
 				byte[] bytes = $instances.getBytes("Cp1252");
 				byte[] output = new byte[bytes.length / 2];
 				Deflater deflater = new Deflater();
@@ -106,7 +106,7 @@ public class ATRandMACDCorrelationEstimator extends CorrelationEstimator {
 		String $lastLine = null;
 		try {
 
-			$lastLine = makeSQL.makeARFFFromSQLForQuestionMark(sym, daysOut, atrParms, macdParms);
+			$lastLine = makeSQL.makeARFFFromSQLForQuestionMark(sym, daysOut, smiParms, tsfParms);
 
 		} catch (
 

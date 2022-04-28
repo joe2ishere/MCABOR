@@ -11,25 +11,27 @@ import java.util.Scanner;
 import java.util.logging.LogManager;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
-import com.americancoders.lineIntersect.Line;
-import com.americancoders.lineIntersect.Point;
+import com.tictactec.ta.lib.Core;
 import com.tictactec.ta.lib.MAType;
+import com.tictactec.ta.lib.MInteger;
 
 import bands.DeltaBands;
-import movingAvgAndLines.MovingAvgAndLineIntercept;
+import util.Realign;
 import util.getDatabaseConnection;
 
-public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
-	boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
+public class APOMakeARFFfromSQL extends AttributeMakerFromSQL {
 
-	public MALinesMakeARFFfromSQL(boolean b) {
+	boolean withAttributePosition = false; // position is 0 through 9 otherwise it's n1 through p5
+	boolean makeWith30Days = true;
+
+	public APOMakeARFFfromSQL(boolean b, boolean makeWith30) {
 		withAttributePosition = b;
+		makeWith30Days = makeWith30;
 	}
 
 	public static void main(String[] args) throws Exception {
 
 		LogManager.getLogManager().reset();
-
 		Scanner sin = new Scanner(System.in);
 		String sym;
 		while (true) {
@@ -55,11 +57,11 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 			break;
 		}
 		sin.close();
-		MALinesMakeARFFfromSQL malines = new MALinesMakeARFFfromSQL(false);
+		APOMakeARFFfromSQL apo = new APOMakeARFFfromSQL(false, true);
 		Connection conn = getDatabaseConnection.makeConnection();
 		int daysOut = Integer.parseInt(dos);
-		AttributeParm parms = malines.buildParameters(sym, daysOut, conn);
-		String data = malines.makeARFFFromSQL(sym, daysOut, parms, true);
+		AttributeParm parms = apo.buildParameters(sym, daysOut, conn);
+		String data = apo.makeARFFFromSQL(sym, daysOut, parms, false);
 		File file = new File(getFilename(sym, daysOut));
 		PrintWriter pw = new PrintWriter(file);
 		pw.print(data);
@@ -68,51 +70,38 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 	}
 
 	public static String getFilename(String sym, int dos) {
-
-		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_malis2_correlation.arff";
+		return "c:/users/joe/correlationARFF/" + sym + "_" + dos + "_apo2_correlation.arff";
 	}
 
 	@Override
 	public AttributeParm buildParameters(String sym, int daysOut, Connection conn) throws Exception {
-		MAAvgParms parms = new MAAvgParms();
+		Core core = new Core();
+		APOParms parms = new APOParms();
 
-		PreparedStatement ps = conn
-				.prepareStatement("select * from maline_correlation" + " where symbol=? and toCloseDays=?");
-
-		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-
+		PreparedStatement ps = conn.prepareStatement("select * from apo_correlation" + (makeWith30Days ? "" : "_130")
+				+ " where symbol=? and toCloseDays=?  ");
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();
-
 		while (rs.next()) {
-
 			String functionSymbol = rs.getString("functionSymbol");
-			GetETFDataUsingSQL pgsd = GetETFDataUsingSQL.getInstance(functionSymbol);
-
-			int period = rs.getInt("period");
-			String matype = rs.getString("maType");
-			MAType maType = null;
-			for (MAType types : MAType.values()) {
-				if (types.name().compareTo(matype) == 0) {
-					maType = types;
-					break;
-				}
-			}
-
-			MovingAvgAndLineIntercept mal = new MovingAvgAndLineIntercept(pgsd, period, maType, period, maType);
-			MaLineParmToPass mlp = new MaLineParmToPass(mal, pgsd.inClose, null);
+			GetETFDataUsingSQL gsdAPO = GetETFDataUsingSQL.getInstance(functionSymbol);
+			int fastPeriod = rs.getInt("fastPeriod");
+			int slowPeriod = rs.getInt("slowPeriod");
+			double apo[] = new double[gsdAPO.inClose.length];
+			MInteger outBegIdx = new MInteger();
+			MInteger outNBElement = new MInteger();
+			core.apo(0, gsdAPO.inClose.length - 1, gsdAPO.inClose, fastPeriod, slowPeriod, MAType.Ema, outBegIdx,
+					outNBElement, apo);
+			Realign.realign(apo, outBegIdx.value);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
-
 			parms.addSymbol(symKey);
-			parms.setMALI(symKey, mlp);
-			parms.setDateIndex(symKey, pgsd.dateIndex);
-			parms.setDaysDiff(symKey, 0);
-
+			parms.setAPOs(symKey, apo);
+			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
+			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
+			parms.setDateIndex(symKey, gsdAPO.dateIndex);
 		}
-
 		return parms;
-
 	}
 
 	@Override
@@ -120,34 +109,30 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 			throws Exception {
 
 		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-
-		DeltaBands db = new DeltaBands(gsd.inClose, daysOut);
-		int pos = 200;
+		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
+		int pos = 25 + daysOut;
 		String startDate = gsd.inDate[pos];
-
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
-		pw.println("% 1. Title: " + sym + "_malis_correlation");
+		pw.println("% 1. Title: " + sym + "_apo_correlation");
 		pw.println("@RELATION " + sym + "_" + daysOut);
-
 		for (String symKey : parms.keySet()) {
-
-			pw.println("@ATTRIBUTE " + symKey + "maline1 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "maline2 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "maline3 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "apo NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "apoBack NUMERIC");
 			if (startDate.compareTo(parms.getDateIndex(symKey).firstKey()) < 0)
 				startDate = parms.getDateIndex(symKey).firstKey();
 		}
 
-		pos = gsd.dateIndex.get(startDate) + 5;
-
-		startDate = gsd.getInDate()[pos];
 		if (withAttributePosition)
 			pw.println("@ATTRIBUTE class NUMERIC");
 		else
 			pw.println(db.getAttributeDefinition());
 
 		pw.println("@DATA");
+
+		while (gsd.inDate[pos].compareTo(startDate) < 0)
+			pos++;
+		pos += 20;
 		int lines = 0;
 		int largeGroupCnt = -1;
 		int positiveCount = 0;
@@ -227,7 +212,6 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 				lines++;
 			}
 		}
-
 		return sw.toString();
 	}
 
@@ -235,20 +219,15 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 	public String makeARFFFromSQLForQuestionMark(String sym, int daysOut, AttributeParm parms) throws Exception {
 
 		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-
-		DeltaBands db = new DeltaBands(gsd.inClose, daysOut);
-		int pos = 200;
+		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
 
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
-		pw.println("% 1. Title: " + sym + "_malis_correlation");
+		pw.println("% 1. Title: " + sym + "_apo_correlation");
 		pw.println("@RELATION " + sym + "_" + daysOut);
-
 		for (String symKey : parms.keySet()) {
-
-			pw.println("@ATTRIBUTE " + symKey + "maline1 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "maline2 NUMERIC");
-			pw.println("@ATTRIBUTE " + symKey + "maline3 NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "apo NUMERIC");
+			pw.println("@ATTRIBUTE " + symKey + "apoBack NUMERIC");
 
 		}
 
@@ -258,11 +237,13 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 			pw.println(db.getAttributeDefinition());
 
 		pw.println("@DATA");
+
 		int iday = gsd.inDate.length - 1;
 		StringBuffer sb = printAttributeData(iday, gsd.inDate, daysOut, parms, gsd.inClose, db, withAttributePosition,
 				true);
 		if (sb != null) {
 			pw.print(sb.toString());
+
 		}
 
 		return sw.toString();
@@ -270,38 +251,14 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-	public void getAttributeText(StringBuffer sb, MaLineParmToPass ptp, int start) {
-
-		Line ln, ln2, ln3;
-		String rsp1 = "?", rsp2 = "?", rsp3 = "?";
-		try {
-			Point pt0 = ptp.mali.getPoint(ptp.processDate, 0);
-			Point pt1 = ptp.mali.getPoint(ptp.processDate, 1);
-			ln = new Line(pt1, pt0);
-			Point pt2 = ptp.mali.getPoint(ptp.processDate, 2);
-			ln2 = new Line(pt2, pt0);
-			Point pt3 = ptp.mali.getPoint(ptp.processDate, 3);
-			ln3 = new Line(pt3, pt0);
-			Double xp = pt0.xPoint;
-			ln = ptp.mali.getCurrentLineIntercept(ptp.processDate, 1);
-			double yln = ptp.closes[xp.intValue()] / ((pt0.xPoint + start) * ln.slope + ln.yintersect);
-			rsp1 = yln + "";
-			ln2 = ptp.mali.getCurrentLineIntercept(ptp.processDate, 2);
-			double yln2 = ptp.closes[xp.intValue()] / ((pt0.xPoint + start) * ln2.slope + ln2.yintersect);
-			rsp2 = yln2 + "";
-			ln3 = ptp.mali.getCurrentLineIntercept(ptp.processDate, 3);
-			double yln3 = ptp.closes[xp.intValue()] / ((pt0.xPoint + start) * ln3.slope + ln3.yintersect);
-			rsp3 = yln3 + "";
-		} catch (Exception e) {
-
-		}
-		sb.append(rsp1 + "," + rsp2 + "," + rsp3 + ",");
+	public String getAttributeText(double apo[], int apofunctionDaysDiff, int apostart, int doubleBack) {
+		return apo[apostart - doubleBack] + "," + apo[apostart - (apofunctionDaysDiff + doubleBack)] + ",";
 
 	}
 
 	public StringBuffer printAttributeData(int iday, String etfDates[], int daysOut, AttributeParm parms,
 			double[] closes, DeltaBands priceBands, boolean withAttributePosition, boolean forLastUseQuestionMark) {
-		StringBuffer returnBuffer = new StringBuffer(1000);
+		StringBuffer returnBuffer = new StringBuffer(100);
 
 		for (String key : parms.keySet()) {
 
@@ -320,13 +277,12 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 					}
 				}
 
-			MaLineParmToPass mlp = ((MAAvgParms) parms).getMALI(key);
-			mlp.processDate = etfDates[iday];
-			getAttributeText(returnBuffer, mlp, daysOut);
-			if (returnBuffer == null)
-				return new StringBuffer();
+			double apos[] = ((APOParms) parms).getAPOs(key);
+			Integer doubleBack = parms.getDoubleBacks(key);
+			if (doubleBack == null)
+				doubleBack = 0;
+			returnBuffer.append(getAttributeText(apos, functionDaysDiff, dateidx, doubleBack.intValue()));
 		}
-
 		if (forLastUseQuestionMark)
 			returnBuffer.append("?");
 		else if (withAttributePosition)
@@ -334,6 +290,7 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 		else
 			returnBuffer.append(priceBands.getAttributeValue(iday, daysOut, closes));
 		returnBuffer.append("\n");
+
 		return returnBuffer;
 	}
 

@@ -10,7 +10,6 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -31,8 +30,6 @@ import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.mail.EmailAttachment;
@@ -51,6 +48,7 @@ import bands.DeltaBands;
 import util.Averager;
 import util.DateLine;
 import util.getDatabaseConnection;
+import utils.StandardDeviation;
 import utils.TopAndBottomList;
 import weka.attributeSelection.ASEvaluation;
 import weka.attributeSelection.ASSearch;
@@ -72,7 +70,7 @@ public abstract class CorrelationEstimator implements Runnable {
 	static TreeMap<String, GetETFDataUsingSQL> gsds = new TreeMap<>();
 	static ArrayList<String> primaryETFs = new ArrayList<String>();
 
-	TreeMap<Integer, Averager> avgForDaysOut;
+	TreeMap<Integer, StandardDeviation> avgForDaysOut;
 
 	static TreeMap<Integer, Favored> dailyHighlyFavored = new TreeMap<>();
 	static TreeMap<Integer, Favored> dailyLeastFavored = new TreeMap<>();
@@ -94,8 +92,8 @@ public abstract class CorrelationEstimator implements Runnable {
 	static String updateOldFileDate = null;
 
 	static boolean debugging = true;
-
 	static boolean debuggingFast = false;
+	static boolean doA130DayRun = false;
 
 	static TreeMap<String, double[]> symbolDailyAverages = new TreeMap<>();
 
@@ -132,15 +130,22 @@ public abstract class CorrelationEstimator implements Runnable {
 			GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
 			gsds.put(sym, gsd);
 		}
-		selectSymbols = conn.prepareStatement("SELECT DISTINCT symbol FROM dmi_correlation WHERE symbol IN "
-				+ "(SELECT DISTINCT symbol FROM macd_correlation) and "
-				+ "symbol IN (SELECT DISTINCT symbol FROM sm_correlation) and "
-				+ "symbol IN (SELECT DISTINCT symbol FROM tsf_correlation) ");
+		if (doA130DayRun == false)
+			selectSymbols = conn.prepareStatement("SELECT DISTINCT symbol FROM dmi_correlation WHERE symbol IN "
+					+ "(SELECT DISTINCT symbol FROM macd_correlation) and "
+					+ "symbol IN (SELECT DISTINCT symbol FROM sm_correlation) and "
+					+ "symbol IN (SELECT DISTINCT symbol FROM tsf_correlation) ");
+		else
+			selectSymbols = conn.prepareStatement("SELECT DISTINCT symbol FROM dmi_correlation_130 WHERE symbol IN "
+					+ "(SELECT DISTINCT symbol FROM macd_correlation_130) and "
+					+ "symbol IN (SELECT DISTINCT symbol FROM sm_correlation_130) and "
+					+ "symbol IN (SELECT DISTINCT symbol FROM tsf_correlation_130) ");
 		rsSymbols = selectSymbols.executeQuery();
 		while (rsSymbols.next()) {
 			String sym = rsSymbols.getString(1);
 			primaryETFs.add(sym);
 		}
+		selectSymbols.close();
 		Collections.sort(primaryETFs);
 	}
 
@@ -216,20 +221,23 @@ public abstract class CorrelationEstimator implements Runnable {
 			return;
 
 		}
-		resultsForDBFile = new File(
-				"c:/users/joe/correlationOutput/resultsForFunctionTest_" + currentMktDate + csvFileType);
+		resultsForDBFile = new File("c:/users/joe/correlationOutput/resultsForFunctionTest_"
+				+ (doA130DayRun == false ? "" : "130_") + currentMktDate + csvFileType);
 
 		resultsForDBPrintWriter = new PrintWriter(resultsForDBFile);
+		PrintWriter averageOutPW = new PrintWriter("c:/users/joe/correlationOutput/"
+				+ (doA130DayRun == false ? "" : "130_") + currentMktDate + csvFileType);
 
-		PrintWriter averageOutPW = new PrintWriter("c:/users/joe/correlationOutput/" + currentMktDate + csvFileType);
-
-		File rawDataCSVFile = new File("c:/users/joe/correlationOutput/rawData" + currentMktDate + csvFileType);
-
+		File rawDataCSVFile = new File("c:/users/joe/correlationOutput/rawData" + (doA130DayRun == false ? "" : "130_")
+				+ currentMktDate + csvFileType);
 		PrintWriter rawDataCSVPW = new PrintWriter(rawDataCSVFile);
 
-		File estimatedPriceCSVFile = new File(
-				"c:/users/joe/correlationOutput/estimatedPrices" + currentMktDate + csvFileType);
+		File differentialCSVFile = new File("c:/users/joe/correlationOutput/differntial"
+				+ (doA130DayRun == false ? "" : "130_") + currentMktDate + csvFileType);
+		PrintWriter differentialCSVPW = new PrintWriter(differentialCSVFile);
 
+		File estimatedPriceCSVFile = new File("c:/users/joe/correlationOutput/estimatedPrices"
+				+ (doA130DayRun == false ? "" : "130_") + currentMktDate + csvFileType);
 		PrintWriter estimatedPriceCSVPW = new PrintWriter(estimatedPriceCSVFile);
 
 		PreparedStatement psInsertToSQL = conn
@@ -248,13 +256,13 @@ public abstract class CorrelationEstimator implements Runnable {
 		loadGSDSTable(conn);
 		for (String sym : gsds.keySet()) {
 			GetETFDataUsingSQL gsd = gsds.get(sym);
-			double[] symavg = new double[31];
+			double[] symavg = new double[doA130DayRun == false ? 31 : 131];
 			symbolDailyAverages.put(sym, symavg);
 			if (datesApart == null) {
 				datesApart = new ArrayList<>();
-				for (int i = 5; i <= 30; i += 5) {
+				for (int i = 5; i <= (doA130DayRun == false ? 30 : 130); i += 5) {
 					datesApart.add(gsd.inDate[gsd.inDate.length - (i + 1)]);
-					if (i == 25)
+					if (i == (doA130DayRun == false ? 25 : 125))
 						updateOldFileDate = gsd.inDate[gsd.inDate.length - (i + 1)];
 				}
 
@@ -288,18 +296,20 @@ public abstract class CorrelationEstimator implements Runnable {
 			catList.append(sym + " ");
 		}
 
-		final PreparedStatement selectDays = conn
-				.prepareStatement("select distinct toCloseDays from tsf_correlation" + "  order by toCloseDays");
+		final PreparedStatement selectDays = conn.prepareStatement("select distinct toCloseDays from tsf_correlation"
+				+ (doA130DayRun == false ? "" : "_130") + " order by toCloseDays");
 		ResultSet rsSelectDays = selectDays.executeQuery();
 		ArrayList<Integer> daysOutList = new ArrayList<Integer>();
 		System.out.print("Daily symbol");
 		averageOutPW.print("Daily");
 		rawDataCSVPW.print("Symbol");
+		differentialCSVPW.print("Symbol");
 		estimatedPriceCSVPW.print("Symbol;Close");
 
-		String hdgDate = DateLine.dateLine(currentMktDate, 30);
+		String hdgDate = DateLine.dateLine(currentMktDate, doA130DayRun == false ? 30 : 130);
 		averageOutPW.print(hdgDate);
 		rawDataCSVPW.print(hdgDate);
+		differentialCSVPW.print(hdgDate);
 		estimatedPriceCSVPW.print(hdgDate);
 		System.out.print(hdgDate);
 
@@ -310,28 +320,43 @@ public abstract class CorrelationEstimator implements Runnable {
 			dailyLeastFavored.put(day, new Favored("", 99.));
 
 		}
-		System.out.println(";Avg. 1-5; Avg. 6-10; Avg. 11-15;Avg. 16-20; Avg. 21-25; Avg. 26-30;Avg.");
-		averageOutPW.println(";Avg. 1-5; Avg. 6-10; Avg. 11-15;Avg. 16-20; Avg. 21-25; Avg. 26-30;Avg.");
-		rawDataCSVPW.println();
-		estimatedPriceCSVPW.println();
+		if (doA130DayRun == false) {
+			System.out.println(";Avg. 1-5; Avg. 6-10; Avg. 11-15;Avg. 16-20; Avg. 21-25; Avg. 26-30;Avg.");
+			averageOutPW.println(";Avg. 1-5; Avg. 6-10; Avg. 11-15;Avg. 16-20; Avg. 21-25; Avg. 26-30;Avg.");
+			rawDataCSVPW.println();
+			differentialCSVPW.println();
+			estimatedPriceCSVPW.println();
+		} else
+			System.out.println();
 
 		ArrayList<CorrelationEstimator> estimators = new ArrayList<>();
 
 		// TODO set estimators
-		estimators.add(new SMICorrelationEstimator(conn));
-		estimators.add(new ATRandMACDCorrelationEstimator(conn));
-		estimators.add(new MACDandMACorrelationEstimator(conn));
-		estimators.add(new ATRCorrelationEstimator(conn));
-		estimators.add(new DMICorrelationEstimator(conn));
-		estimators.add(new MACDCorrelationEstimator(conn));
-		estimators.add(new MAAveragerCorrelationEstimator(conn));
-		estimators.add(new MALinesCorrelationEstimator(conn));
-		estimators.add(new TSFCorrelationEstimator(conn));
-		estimators.add(new MACorrelationEstimator(conn));
-		// TODO set estimators
+		if (doA130DayRun == false) {
+			estimators.add(new APOCorrelationEstimator(conn, true));
+			// estimators.add(new ATRCorrelationEstimator(conn, true));
+			// estimators.add(new DMICorrelationEstimator(conn, true));
+			// estimators.add(new MAAveragerCorrelationEstimator(conn));
+			// estimators.add(new MACDCorrelationEstimator(conn, true));
+			estimators.add(new MACorrelationEstimator(conn));
+			estimators.add(new MALinesCorrelationEstimator(conn));
+			estimators.add(new PSARCorrelationEstimator(conn, true));
+			estimators.add(new SMICorrelationEstimator(conn, true));
+			estimators.add(new TSFCorrelationEstimator(conn, true));
+			// estimators.add(new ATRandMACDCorrelationEstimator(conn));
+			// estimators.add(new MACDandMACorrelationEstimator(conn));
+			estimators.add(new SMIandMACDCorrelationEstimator(conn));
+			// estimators.add(new SMIandTSFCorrelationEstimator(conn));
 
-		StringBuffer etfExpectations = new StringBuffer(1000);
-		StringBuffer etfExpectationsAbridged = new StringBuffer(1000);
+		} else {
+			estimators.add(new DMICorrelationEstimator(conn, false));
+			estimators.add(new MACDCorrelationEstimator(conn, false));
+			estimators.add(new SMICorrelationEstimator(conn, false));
+			estimators.add(new TSFCorrelationEstimator(conn, false));
+		}
+		// TODO set estimators
+		StringBuffer etfExpectations = new StringBuffer(2000);
+		StringBuffer etfExpectationsAbridged = new StringBuffer(2000);
 
 		ArrayList<String> categoryDoneforDebugging = new ArrayList<>();
 
@@ -354,13 +379,14 @@ public abstract class CorrelationEstimator implements Runnable {
 						categoryDoneforDebugging.add(cat);
 					}
 
-//					if (sym.startsWith("kre") == false)
+//					if (sym.startsWith("dbc") == false)
 //						continue;
 				}
 			}
 			System.out.print(sym);
 			averageOutPW.print(sym);
 			rawDataCSVPW.print(sym);
+			differentialCSVPW.print(sym);
 			estimatedPriceCSVPW.print(sym);
 
 			psInsertToSQL.setString(1, sym);
@@ -370,7 +396,7 @@ public abstract class CorrelationEstimator implements Runnable {
 
 			StringBuffer sqlBuffer = new StringBuffer(1000);
 
-			TreeMap<Integer, Averager> avgForDaysOut = new TreeMap<>();
+			TreeMap<Integer, StandardDeviation> avgForDaysOut = new TreeMap<>();
 
 			TreeMap<Integer, Averager> catAvg = null;
 			if (symCats.containsKey(sym))
@@ -381,9 +407,11 @@ public abstract class CorrelationEstimator implements Runnable {
 			boolean[] biggerHalfFirst = { true, false };
 
 			for (int daysOut : daysOutList) {
-				avgForDaysOut.put(daysOut, new Averager());
-				Semaphore threadSemaphore = new Semaphore(4);
+				avgForDaysOut.put(daysOut, new StandardDeviation());
+				Semaphore threadSemaphore = new Semaphore(5);
+
 				DeltaBands priceBands = new DeltaBands(gsds.get(sym).inClose, daysOut);
+
 				for (boolean whichHalf : biggerHalfFirst) {
 					{
 						ArrayList<Thread> threads = new ArrayList<>();
@@ -402,71 +430,74 @@ public abstract class CorrelationEstimator implements Runnable {
 				}
 
 			}
+			if (doA130DayRun == false)
+				for (int daysOut : daysOutList) {
+					try {
+						String badnessFileName = "c:/users/joe/correlationARFF/bad/" + sym + "_" + daysOut
+								+ "_allbad_correlation.arff";
+						StringBuffer sb = new StringBuffer(1000);
+						String in = "";
+						BufferedReader brBad = new BufferedReader(new FileReader(badnessFileName));
+						while ((in = brBad.readLine()) != null) {
+							sb.append(in + "\n");
+						}
+						brBad.close();
+						sb.append(theBadness.get("apo;" + daysOut) + ",");
+						// sb.append(theBadness.get("dmi;" + daysOut) + ",");
+						// sb.append(theBadness.get("macd;" + daysOut) + ",");
+						// sb.append(theBadness.get("maAvg;" + daysOut) + ",");
+						sb.append(theBadness.get("mali;" + daysOut) + ",");
+						sb.append(theBadness.get("psar;" + daysOut) + ",");
+						sb.append(theBadness.get("smi;" + daysOut) + ",");
+						sb.append(theBadness.get("tsf;" + daysOut) + ",");
+						sb.append("?");
+						Instances instances = new Instances(new StringReader(sb.toString()));
+						int classPos = instances.numAttributes() - 1;
+						instances.setClassIndex(classPos);
 
-			for (int daysOut : daysOutList) {
-				try {
-					String badnessFileName = "c:/users/joe/correlationARFF/bad/" + sym + "_" + daysOut
-							+ "_allbad_correlation.arff";
-					StringBuffer sb = new StringBuffer(1000);
-					String in = "";
-					BufferedReader brBad = new BufferedReader(new FileReader(badnessFileName));
-					while ((in = brBad.readLine()) != null) {
-						sb.append(in + "\n");
+						AttributeSelection as = new AttributeSelection();
+						ASSearch asSearch = ASSearch.forName("weka.attributeSelection.GreedyStepwise",
+								new String[] { "-B", "-R" });
+						as.setSearch(asSearch);
+						ASEvaluation asEval = ASEvaluation.forName("weka.attributeSelection.CfsSubsetEval",
+								new String[] { "-M" });
+						as.setEvaluator(asEval);
+						as.SelectAttributes(instances);
+						instances = as.reduceDimensionality(instances);
+						Classifier classifier = AbstractClassifier.forName("weka.classifiers.lazy.LWL",
+								new String[] { "-A", "weka.core.neighboursearch.LinearNNSearch", "-W",
+										"weka.classifiers.functions.LinearRegression", "--", "-S", "1", "-C", "-R",
+										"0.0011526567509185315" });
+						classifier.buildClassifier(instances);
+
+						double got = classifier.classifyInstance(instances.get(instances.size() - 1));
+						if (got > 9.0)
+							got = 9.0;
+						if (got < 0.0)
+							got = 0.0;
+						setResultsForDBForBadNess(got, sym, daysOut);
+						double dd = daysOut;
+						avgForDaysOut.get(daysOut).enter(got);
+					} catch (Exception e) {
+						System.out.println(e.getLocalizedMessage());
+						System.out.println("continuing");
 					}
-					brBad.close();
-					sb.append(theBadness.get("dmi2;" + daysOut) + ",");
-					sb.append(theBadness.get("macd2;" + daysOut) + ",");
-					sb.append(theBadness.get("maAvg2;" + daysOut) + ",");
-					sb.append(theBadness.get("mali2;" + daysOut) + ",");
-					sb.append(theBadness.get("smi2;" + daysOut) + ",");
-					sb.append(theBadness.get("tsf2;" + daysOut) + ",");
-					sb.append("?");
-					Instances instances = new Instances(new StringReader(sb.toString()));
-					int classPos = instances.numAttributes() - 1;
-					instances.setClassIndex(classPos);
-
-					AttributeSelection as = new AttributeSelection();
-					ASSearch asSearch = ASSearch.forName("weka.attributeSelection.GreedyStepwise",
-							new String[] { "-B", "-R" });
-					as.setSearch(asSearch);
-					ASEvaluation asEval = ASEvaluation.forName("weka.attributeSelection.CfsSubsetEval",
-							new String[] { "-M" });
-					as.setEvaluator(asEval);
-					as.SelectAttributes(instances);
-					instances = as.reduceDimensionality(instances);
-					Classifier classifier = AbstractClassifier.forName("weka.classifiers.lazy.LWL",
-							new String[] { "-A", "weka.core.neighboursearch.LinearNNSearch", "-W",
-									"weka.classifiers.functions.LinearRegression", "--", "-S", "1", "-C", "-R",
-									"0.0011526567509185315" });
-					classifier.buildClassifier(instances);
-
-					double got = classifier.classifyInstance(instances.get(instances.size() - 1));
-					if (got > 9.0)
-						got = 9.0;
-					if (got < 0.0)
-						got = 0.0;
-					setResultsForDBForBadNess(got, sym, daysOut);
-					double dd = daysOut;
-					avgForDaysOut.get(daysOut).add(got, dd / 5);
-				} catch (Exception e) {
-					System.out.println(e.getLocalizedMessage());
-					System.out.println("continuing");
-				}
 //				// daysOut / 5 is a weight that shows that
 //				// the lower dates are less effective and the higher dates are much more
 //				// effective
 
-			}
+				}
 
-			double savg[] = new double[31];
-			/* if (one80Mode == false) */ {
+			double savg[] = new double[doA130DayRun == false ? 31 : 131];
+			/* if (thirtyDayMode == false) */ {
 				estimatedPriceCSVPW.print(";" + df.format(gsds.get(sym).inClose[gsds.get(sym).inClose.length - 1]));
 			}
 			for (Integer key : avgForDaysOut.keySet()) {
-				double theAvg = avgForDaysOut.get(key).get();
+				double theAvg = avgForDaysOut.get(key).getMean();
 				System.out.print(";" + df.format(theAvg));
 				averageOutPW.print(";" + df.format(theAvg));
 				rawDataCSVPW.print(";" + df.format(theAvg));
+				differentialCSVPW.print(";" + df.format(avgForDaysOut.get(key).getStandardDeviation()));
 				DeltaBands priceBands = new DeltaBands(gsds.get(sym).inClose, key);
 				estimatedPriceCSVPW.print(";" + df.format(gsds.get(sym).inClose[gsds.get(sym).inClose.length - 1]
 						* (1. + priceBands.getApproximiateValue(theAvg))));
@@ -494,6 +525,10 @@ public abstract class CorrelationEstimator implements Runnable {
 			}
 
 			symbolDailyAverages.put(sym, savg);
+			if (doA130DayRun == true) {
+				System.out.println();
+				continue;
+			}
 
 			StringBuffer webSiteReportSB = new StringBuffer("<tr><td>" + sym + "</td>");
 			StringBuffer etfExpectationReportWaitForBuyOrSell = new StringBuffer(pdfStartRowWithThinBorder);
@@ -507,9 +542,9 @@ public abstract class CorrelationEstimator implements Runnable {
 				psInsertToSQL.execute();
 			}
 
-			double averages[] = new double[30];
+			double averages[] = new double[doA130DayRun == false ? 30 : 130];
 			for (Integer daysOut : avgForDaysOut.keySet()) {
-				averages[daysOut - 1] = avgForDaysOut.get(daysOut).get();
+				averages[daysOut - 1] = avgForDaysOut.get(daysOut).getMean();
 			}
 			boolean buySellWrittenToWebPage = false;
 			Averager avverager = new Averager();
@@ -588,10 +623,12 @@ public abstract class CorrelationEstimator implements Runnable {
 			System.out.println(";" + df.format(avverager.get()));
 			averageOutPW.println(";" + df.format(avverager.get()));
 			rawDataCSVPW.println();
+			differentialCSVPW.println();
 			estimatedPriceCSVPW.println();
 
 			averageOutPW.flush();
 			rawDataCSVPW.flush();
+			differentialCSVPW.flush();
 			estimatedPriceCSVPW.flush();
 
 			if (buySellWrittenToWebPage == true) {
@@ -609,6 +646,13 @@ public abstract class CorrelationEstimator implements Runnable {
 //			System.exit(0);
 		}
 
+		if (doA130DayRun == true) {
+			estimatedPriceCSVPW.close();
+			differentialCSVPW.close();
+			rawDataCSVPW.close();
+			averageOutPW.close();
+			return;
+		}
 		// makeBestWorstDaily
 		StringBuffer bestDailyTop = new StringBuffer(1000);
 		StringBuffer bestDailyBottom = new StringBuffer(1000);
@@ -632,7 +676,6 @@ public abstract class CorrelationEstimator implements Runnable {
 		worstDailyBottom.append(pdfEndRow);
 		resultsForDBPrintWriter.flush();
 		resultsForDBPrintWriter.close();
-		updateResultsTable(conn, resultsForDBFile);
 
 		System.out.println();
 		averageOutPW.flush();
@@ -685,6 +728,8 @@ public abstract class CorrelationEstimator implements Runnable {
 		rawDataCSVPW.close();
 		rawDataCSVPW.flush();
 		rawDataCSVPW.close();
+		differentialCSVPW.flush();
+		differentialCSVPW.close();
 
 		TopAndBottomList catOverallAverages = new TopAndBottomList();
 		for (String key : catAverages.keySet()) {
@@ -746,11 +791,26 @@ public abstract class CorrelationEstimator implements Runnable {
 		br.close();
 
 		String xmlText = fsb.toString().replace("<<<<MARKET DATE>>>>", currentMktDate);
+
+		ArrayList<String> minidates = DateLine.forecast5DaysLine(currentMktDate, 30);
+
+		xmlText = xmlText.replace("<<<miniblock0>>>", minidates.get(0));
+		xmlText = xmlText.replace("<<<miniblock1>>>", minidates.get(1));
+		xmlText = xmlText.replace("<<<miniblock2>>>", minidates.get(2));
+		xmlText = xmlText.replace("<<<miniblock3>>>", minidates.get(3));
+		xmlText = xmlText.replace("<<<miniblock4>>>", minidates.get(4));
+		xmlText = xmlText.replace("<<<miniblock5>>>", minidates.get(5));
+
+		xmlText = xmlText.replace("<<<<DATE BLOCK>>>", DateLine.forecastDateLine(currentMktDate, 30));
+
 		if (etfExpectationsAbridged.length() < 2) {
 			etfExpectationsAbridged.append("<fo:table-row background-color='lightgrey' >");
 			etfExpectationsAbridged.append("<fo:table-cell><fo:block>No Data To Report</fo:block></fo:table-cell>");
 			etfExpectationsAbridged.append("</fo:table-row>");
 		}
+		xmlText = xmlText.replace("<<<<WEEKLY RECOMMENDATION REQUIREMENT>>>>",
+				"An ETF must have a 5-day period average of less than " + sellIndicatorLimit + "% for a sell signal"
+						+ " or greater than " + buyIndicatorLimit + "% for a buy signal.");
 		xmlText = xmlText.replace("<<<<ABRIDGED REPORT>>>>", etfExpectationsAbridged.toString());
 		xmlText = xmlText.replace("<<<<CELL DATA>>>>", etfExpectations.toString());
 
@@ -800,9 +860,7 @@ public abstract class CorrelationEstimator implements Runnable {
 
 				FTPClient ftpc = new FTPClient();
 				ftpc.connect("mcverryreport.com");
-
 				ftpc.login("reportly@mcverryreport.com", "*gg77_3*g168");
-
 				ftpc.setControlKeepAliveTimeout(300);
 				ftpc.enterLocalPassiveMode();
 				ftpc.setFileType(FTP.BINARY_FILE_TYPE);
@@ -838,12 +896,10 @@ public abstract class CorrelationEstimator implements Runnable {
 		merger.setDestinationFileName(pdfBothReportName);
 		merger.addSource(new File(pdfReportName));
 		merger.addSource(new File(performanceReportName));
-
 		merger.mergeDocuments(MemoryUsageSetting.setupMainMemoryOnly());
 		boolean lastDayOfWeek = isTodayLastDayOfWeek();
 		Logger logr = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 		String logFileName = String.format("c:/users/joe/correlationOutput/mailOut-log." + currentMktDate + ".txt");
-
 		FileHandler handler = new FileHandler(logFileName, true);
 		handler.setFormatter(new SimpleFormatter());
 		logr.addHandler(handler);
@@ -856,15 +912,12 @@ public abstract class CorrelationEstimator implements Runnable {
 //			eml.addTo("usacoder@icloud.com");
 			eml.setSubject("Reports");
 			eml.setFrom("support@mcverryreport.com");
-
 			StringBuffer htmlMsg = new StringBuffer("<html><body>");
 			htmlMsg.append("<h2>ETF Expectations for " + currentMktDate + "</h2>");
-
 			htmlMsg.append("<h3>Here is a quick analysis of the sectors. </h3>");
 			htmlMsg.append(emailText.toString());
 			htmlMsg.append("</body></html>");
 			eml.setHtmlMsg(htmlMsg.toString());
-
 			EmailAttachment attachment = new EmailAttachment();
 			attachment.setPath(pdfReportName);
 			attachment.setDisposition(EmailAttachment.ATTACHMENT);
@@ -998,6 +1051,9 @@ public abstract class CorrelationEstimator implements Runnable {
 		makeAcctInactive.execute();
 
 		estimatedPriceCSVPW.close();
+
+		UpdateResults.updateResultsTable(conn, resultsForDBFile, debugging);
+
 	}
 
 	static public void topReport(boolean starter, StringBuffer emailText, TopAndBottomList catOverallAverages,
@@ -1029,9 +1085,11 @@ public abstract class CorrelationEstimator implements Runnable {
 		emailText.append(wordsCapitalized(besties[0]) + " sector has " + (bestOrTop ? "the best" : "a good"));
 		bestOrTop = ThreadLocalRandom.current().nextBoolean();
 		emailText.append(" short-term " + (bestOrTop ? "prediction" : "prospect") + ", which should occur in "
-				+ besties[1] + " days. ");
+				+ besties[1] + " days ");
 
-		emailText.append("The computed average is " + df.format(tabLookAhead.getTopValue(0)) + ". ");
+		boolean strengthorAverage = ThreadLocalRandom.current().nextBoolean();
+		emailText.append("with a computed " + (strengthorAverage ? "strength" : "average") + " of "
+				+ df.format(tabLookAhead.getTopValue(0)) + ". ");
 
 		String catSyms[] = catETFList.get(besties[0]).toString().split(" ");
 		TopAndBottomList topsym = new TopAndBottomList();
@@ -1066,10 +1124,12 @@ public abstract class CorrelationEstimator implements Runnable {
 				emailText.append(" Next is followed by the " + wordsCapitalized(besties[0]) + " sector with a "
 						+ (bestOrTop ? "good" : "better than average") + " forecast");
 				if (p11 == p1 & p21 == p2)
-					emailText.append(" for the same time frame. ");
+					emailText.append(" for the same time frame ");
 				else
-					emailText.append(" in " + besties[1] + " days. ");
-				emailText.append("The computed average is " + df.format(tabLookAhead.getTopValue(i)) + ". ");
+					emailText.append(" in " + besties[1] + " days ");
+				strengthorAverage = ThreadLocalRandom.current().nextBoolean();
+				emailText.append(" with a computed " + (strengthorAverage ? "strength" : "average") + " of "
+						+ df.format(tabLookAhead.getTopValue(i)) + ". ");
 				catSyms = catETFList.get(besties[0]).toString().split(" ");
 				for (String csym : catSyms) {
 					double avg[] = symbolDailyAverages.get(csym);
@@ -1118,8 +1178,9 @@ public abstract class CorrelationEstimator implements Runnable {
 		emailText.append(
 				wordsCapitalized(besties[0]) + " sector has " + (worseOrLowest ? "a poor" : "an underperforming")
 						+ " prospect in the " + besties[1] + " day period; ");
-
-		emailText.append("the computed average is " + df.format(tabLookAhead.getBottomValue(0)) + ".");
+		boolean strengthOrAverage = ThreadLocalRandom.current().nextBoolean();
+		emailText.append("the computed " + (strengthOrAverage ? "strength" : "average") + " is "
+				+ df.format(tabLookAhead.getBottomValue(0)) + ".");
 
 		TopAndBottomList topsym = new TopAndBottomList();
 		String periods[] = besties[1].split(" ");
@@ -1149,10 +1210,12 @@ public abstract class CorrelationEstimator implements Runnable {
 				emailText.append(
 						" Coming in second with a weak prospect is the " + wordsCapitalized(besties[0]) + " sector ");
 				if (p11 == p1 & p21 == p2)
-					emailText.append("for the same period. ");
+					emailText.append("for the same period ");
 				else
-					emailText.append("in " + besties[1] + " days.");
-				emailText.append(" The computed average is " + df.format(tabLookAhead.getBottomValue(i)) + ".");
+					emailText.append("in " + besties[1] + " days");
+				strengthOrAverage = ThreadLocalRandom.current().nextBoolean();
+				emailText.append(" with a computed " + (strengthOrAverage ? "strength" : "average") + " of "
+						+ df.format(tabLookAhead.getBottomValue(i)) + ".");
 				topsym = new TopAndBottomList();
 				catSyms = catETFList.get(besties[0]).toString().split(" ");
 				for (String csym : catSyms) {
@@ -1236,8 +1299,9 @@ public abstract class CorrelationEstimator implements Runnable {
 
 	Semaphore threadSemaphore;
 
-	public void setWork(String sym, int daysOut, DeltaBands priceBands, TreeMap<Integer, Averager> smiaverageForDaysOut,
-			TreeMap<String, Double> theBadness, boolean whichHalf, Semaphore threadSemaphore) throws Exception {
+	public void setWork(String sym, int daysOut, DeltaBands priceBands,
+			TreeMap<Integer, StandardDeviation> avgForDaysOut2, TreeMap<String, Double> theBadness, boolean whichHalf,
+			Semaphore threadSemaphore) throws Exception {
 
 		this.sym = sym;
 		this.daysOut = daysOut;
@@ -1249,7 +1313,7 @@ public abstract class CorrelationEstimator implements Runnable {
 
 		this.priceBands = priceBands;
 
-		this.avgForDaysOut = smiaverageForDaysOut;
+		this.avgForDaysOut = avgForDaysOut2;
 
 		this.theBadness = theBadness;
 		this.whichHalf = whichHalf;
@@ -1274,13 +1338,13 @@ public abstract class CorrelationEstimator implements Runnable {
 
 			theBadness.put(function + ";" + daysOut, got);
 			synchronized (theBadness) {
-				Averager thisDaysAverage = avgForDaysOut.get(daysOut);
+				StandardDeviation thisDaysAverage = avgForDaysOut.get(daysOut);
 				if (thisDaysAverage == null) {
-					thisDaysAverage = new Averager();
+					thisDaysAverage = new StandardDeviation();
 					avgForDaysOut.put(daysOut, thisDaysAverage);
 				}
 				// System.out.println("\n"+this.getClass().getSimpleName() + ";" + got);
-				thisDaysAverage.add(got);
+				thisDaysAverage.enter(got);
 
 			}
 
@@ -1317,59 +1381,59 @@ public abstract class CorrelationEstimator implements Runnable {
 			System.exit(0);
 		}
 		String $instances = null;
-		try {
+//		try {
 
-			File instanceFile = new File("c:/users/joe/correlationARFF/" + function + "/" + sym + "/D" + daysOut
-					+ (whichHalf ? "f" : "s") + ".zrff");
-
-			if (instanceFile.exists()) {
-				synchronized (conn) {
-					/*
-					 * BufferedReader br = new BufferedReader(new FileReader(instanceFile));
-					 * StringBuilder builder = new StringBuilder(250000); char[] buffer = new
-					 * char[4096]; int numChars; while ((numChars = br.read(buffer)) > 0) {
-					 * builder.append(buffer, 0, numChars); } byte[] output =
-					 * builder.toString().getBytes(StandardCharsets.UTF_8);br.close(); builder = new
-					 * StringBuilder(250000);
-					 */
-					byte[] output = Files.readAllBytes(instanceFile.toPath());
-					Inflater inflater = new Inflater();
-					inflater.setInput(output);
-					StringBuilder builder = new StringBuilder(250000);
-					while (inflater.finished() == false) {
-						byte b100[] = new byte[100];
-						int len2 = inflater.inflate(b100);
-						builder.append(new String(b100, 0, len2, "Cp1252"));
-					}
-					inflater.end();
-					$instances = builder.toString();
-				}
-			} else {
-				$instances = buildInstances(parms);
-				byte[] bytes = $instances.getBytes("Cp1252");
-				byte[] output = new byte[bytes.length / 2];
-				Deflater deflater = new Deflater();
-				deflater.setInput(bytes);
-				deflater.finish();
-				int len = deflater.deflate(output);
-				File dirFile = new File("c:/users/joe/correlationARFF/" + function);
-				if (dirFile.exists() == false) {
-//					dirFile.createNewFile();
-					dirFile.mkdir();
-				}
-				dirFile = new File("c:/users/joe/correlationARFF/" + function + "/" + sym);
-				if (dirFile.exists() == false) {
-//					dirFile.createNewFile();
-					dirFile.mkdir();
-				}
-				instanceFile.createNewFile();
-				Files.write(instanceFile.toPath(), output);
-
-			}
-		} catch (Exception e1) {
-			e1.printStackTrace();
-			System.exit(0);
-		}
+//			File instanceFile = new File("c:/users/joe/correlationARFF/" + function + "/" + sym + "/D" + daysOut
+//					+ (whichHalf ? "f" : "s") + ".zrff");
+//
+//			if (instanceFile.exists()) {
+//				synchronized (conn) {
+//					/*
+//					 * BufferedReader br = new BufferedReader(new FileReader(instanceFile));
+//					 * StringBuilder builder = new StringBuilder(250000); char[] buffer = new
+//					 * char[4096]; int numChars; while ((numChars = br.read(buffer)) > 0) {
+//					 * builder.append(buffer, 0, numChars); } byte[] output =
+//					 * builder.toString().getBytes(StandardCharsets.UTF_8);br.close(); builder = new
+//					 * StringBuilder(250000);
+//					 */
+//					byte[] output = Files.readAllBytes(instanceFile.toPath());
+//					Inflater inflater = new Inflater();
+//					inflater.setInput(output);
+//					StringBuilder builder = new StringBuilder(250000);
+//					while (inflater.finished() == false) {
+//						byte b100[] = new byte[100];
+//						int len2 = inflater.inflate(b100);
+//						builder.append(new String(b100, 0, len2, "Cp1252"));
+//					}
+//					inflater.end();
+//					$instances = builder.toString();
+//				}
+//			} else {
+		$instances = buildInstances(parms);
+//				byte[] bytes = $instances.getBytes("Cp1252");
+//				byte[] output = new byte[bytes.length / 2];
+//				Deflater deflater = new Deflater();
+//				deflater.setInput(bytes);
+//				deflater.finish();
+//				int len = deflater.deflate(output);
+//				File dirFile = new File("c:/users/joe/correlationARFF/" + function);
+//				if (dirFile.exists() == false) {
+////					dirFile.createNewFile();
+//					dirFile.mkdir();
+//				}
+//				dirFile = new File("c:/users/joe/correlationARFF/" + function + "/" + sym);
+//				if (dirFile.exists() == false) {
+////					dirFile.createNewFile();
+//					dirFile.mkdir();
+//				}
+//				instanceFile.createNewFile();
+//				Files.write(instanceFile.toPath(), output);
+//
+//			}
+//		} catch (Exception e1) {
+//			e1.printStackTrace();
+//			System.exit(0);
+//		}
 
 		if ($instances == null) {
 			System.out.println("if ($instances == null)");
@@ -1708,7 +1772,7 @@ public abstract class CorrelationEstimator implements Runnable {
 		return histPDF.toString();
 	}
 
-	public static void updateResultsTable(Connection conn, File resultsForDBFile2) throws Exception {
+	public static void updateResultsTable(Connection conn, File resultsForDBFile2, boolean debugging) throws Exception {
 
 		String debugAppend = "";
 		if (debugging) {
@@ -1722,7 +1786,7 @@ public abstract class CorrelationEstimator implements Runnable {
 
 			PreparedStatement updateFunctionResults = conn.prepareStatement("insert into correlationfunctionresults"
 					+ debugAppend + " (symbol, function, mktDate, daysOut, guess) " + " values(?,?,?,?,?) "
-					+ " on duplicate key update guess=? ");
+					+ " on duplicate key update guess = (values(guess) + ?) / 2 ");
 			updateFunctionResults.setString(1, ins[0]);
 			updateFunctionResults.setString(2, ins[1]);
 			updateFunctionResults.setString(3, ins[2]);

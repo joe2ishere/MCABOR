@@ -12,10 +12,9 @@ import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import correlation.DMIMakeARFFfromSQL;
-import correlation.MAAveragesMakeARFFfromSQL;
-import correlation.MACDMakeARFFfromSQL;
+import correlation.APOMakeARFFfromSQL;
 import correlation.MALinesMakeARFFfromSQL;
+import correlation.PSARMakeARFFfromSQL;
 import correlation.SMMakeARFFfromSQL;
 import correlation.TSFMakeARFFfromSQL;
 import util.getDatabaseConnection;
@@ -113,10 +112,12 @@ public class TheyreAllBad implements Runnable {
 		PrintWriter pw = new PrintWriter(sw);
 		pw.println("% 1. Title: " + sym + "_" + dos + "_allbad_correlation");
 		pw.println("@RELATION " + sym + "_" + dos);
-		pw.println("@ATTRIBUTE dmi NUMERIC");
-		pw.println("@ATTRIBUTE macd NUMERIC");
-		pw.println("@ATTRIBUTE mavg NUMERIC");
+		pw.println("@ATTRIBUTE apo NUMERIC");
+//		pw.println("@ATTRIBUTE dmi NUMERIC");
+//		pw.println("@ATTRIBUTE macd NUMERIC");
+//		pw.println("@ATTRIBUTE mavg NUMERIC");
 		pw.println("@ATTRIBUTE mali NUMERIC");
+		pw.println("@ATTRIBUTE psar NUMERIC");
 		pw.println("@ATTRIBUTE smi NUMERIC");
 		pw.println("@ATTRIBUTE tsf NUMERIC");
 		pw.println("@ATTRIBUTE class NUMERIC");
@@ -125,25 +126,35 @@ public class TheyreAllBad implements Runnable {
 
 		Connection conn = getDatabaseConnection.makeConnection();
 
-		DMIMakeARFFfromSQL dmi = new DMIMakeARFFfromSQL(true, true);
-		ArffReader dmiArff = new ArffReader(new StringReader(dmi.makeARFFFromSQL(sym, dos, conn)));
-		int dmiClassPos = dmiArff.getData().numAttributes() - 1;
-		dmiArff.getData().setClassIndex(dmiClassPos);
+		APOMakeARFFfromSQL apo = new APOMakeARFFfromSQL(true, true);
+		ArffReader apoArff = new ArffReader(new StringReader(apo.makeARFFFromSQL(sym, dos, conn)));
+		int apoClassPos = apoArff.getData().numAttributes() - 1;
+		apoArff.getData().setClassIndex(apoClassPos);
 
-		MACDMakeARFFfromSQL macd = new MACDMakeARFFfromSQL(true, true);
-		ArffReader macdArff = new ArffReader(new StringReader(macd.makeARFFFromSQL(sym, dos, conn)));
-		int macdClassPos = macdArff.getData().numAttributes() - 1;
-		macdArff.getData().setClassIndex(macdClassPos);
-
-		MAAveragesMakeARFFfromSQL mavg = new MAAveragesMakeARFFfromSQL(true);
-		ArffReader mavgArff = new ArffReader(new StringReader(mavg.makeARFFFromSQL(sym, dos, conn)));
-		int mavgClassPos = mavgArff.getData().numAttributes() - 1;
-		mavgArff.getData().setClassIndex(mavgClassPos);
+//		DMIMakeARFFfromSQL dmi = new DMIMakeARFFfromSQL(true, true);
+//		ArffReader dmiArff = new ArffReader(new StringReader(dmi.makeARFFFromSQL(sym, dos, conn)));
+//		int dmiClassPos = dmiArff.getData().numAttributes() - 1;
+//		dmiArff.getData().setClassIndex(dmiClassPos);
+//
+//		MACDMakeARFFfromSQL macd = new MACDMakeARFFfromSQL(true, true);
+//		ArffReader macdArff = new ArffReader(new StringReader(macd.makeARFFFromSQL(sym, dos, conn)));
+//		int macdClassPos = macdArff.getData().numAttributes() - 1;
+//		macdArff.getData().setClassIndex(macdClassPos);
+//
+//		MAAveragesMakeARFFfromSQL mavg = new MAAveragesMakeARFFfromSQL(true);
+//		ArffReader mavgArff = new ArffReader(new StringReader(mavg.makeARFFFromSQL(sym, dos, conn)));
+//		int mavgClassPos = mavgArff.getData().numAttributes() - 1;
+//		mavgArff.getData().setClassIndex(mavgClassPos);
 
 		MALinesMakeARFFfromSQL mali = new MALinesMakeARFFfromSQL(true);
 		ArffReader maliArff = new ArffReader(new StringReader(mali.makeARFFFromSQL(sym, dos, conn)));
 		int maliClassPos = maliArff.getData().numAttributes() - 1;
 		maliArff.getData().setClassIndex(maliClassPos);
+
+		PSARMakeARFFfromSQL psar = new PSARMakeARFFfromSQL(true, true);
+		ArffReader psarArff = new ArffReader(new StringReader(psar.makeARFFFromSQL(sym, dos, conn)));
+		int psarClassPos = psarArff.getData().numAttributes() - 1;
+		psarArff.getData().setClassIndex(psarClassPos);
 
 		SMMakeARFFfromSQL smi = new SMMakeARFFfromSQL(true, true);
 		ArffReader smiArff = new ArffReader(new StringReader(smi.makeARFFFromSQL(sym, dos, conn)));
@@ -155,22 +166,30 @@ public class TheyreAllBad implements Runnable {
 		int tsfClassPos = tsfArff.getData().numAttributes() - 1;
 		tsfArff.getData().setClassIndex(tsfClassPos);
 
-		for (String dt : dmi.dateAttributeLookUp.keySet()) {
+		for (String dt : apo.dateAttributeLookUp.keySet()) {
 
-			Integer dmiPos = dmi.getDatePosition(dt);
-			if (dmiPos == null)
+			Integer apoPos = apo.getDatePosition(dt);
+			if (apoPos == null)
 				continue;
 
-			Integer macdPos = macd.getDatePosition(dt);
-			if (macdPos == null)
-				continue;
-
-			Integer mavgPos = mavg.getDatePosition(dt);
-			if (mavgPos == null)
-				continue;
+//			Integer dmiPos = dmi.getDatePosition(dt);
+//			if (dmiPos == null)
+//				continue;
+//
+//			Integer macdPos = macd.getDatePosition(dt);
+//			if (macdPos == null)
+//				continue;
+//
+//			Integer mavgPos = mavg.getDatePosition(dt);
+//			if (mavgPos == null)
+//				continue;
 
 			Integer maliPos = mali.getDatePosition(dt);
 			if (maliPos == null)
+				continue;
+
+			Integer psarPos = psar.getDatePosition(dt);
+			if (psarPos == null)
 				continue;
 
 			Integer smiPos = smi.getDatePosition(dt);
@@ -181,17 +200,23 @@ public class TheyreAllBad implements Runnable {
 			if (tsfPos == null)
 				continue;
 
-			Instance dmiInst = dmiArff.getData().get(dmiPos.intValue());
-			double dmiClassValue = dmiInst.classValue();
+			Instance apoInst = apoArff.getData().get(apoPos.intValue());
+			double apoClassValue = apoInst.classValue();
 
-			Instance macdInst = macdArff.getData().get(macdPos.intValue());
-			double macdClassValue = macdInst.classValue();
-
-			Instance mavgInst = mavgArff.getData().get(mavgPos.intValue());
-			double mavgClassValue = mavgInst.classValue();
+//			Instance dmiInst = dmiArff.getData().get(dmiPos.intValue());
+//			double dmiClassValue = dmiInst.classValue();
+//
+//			Instance macdInst = macdArff.getData().get(macdPos.intValue());
+//			double macdClassValue = macdInst.classValue();
+//
+//			Instance mavgInst = mavgArff.getData().get(mavgPos.intValue());
+//			double mavgClassValue = mavgInst.classValue();
 
 			Instance maliInst = maliArff.getData().get(maliPos.intValue());
 			double maliClassValue = maliInst.classValue();
+
+			Instance psarInst = psarArff.getData().get(psarPos.intValue());
+			double psarClassValue = psarInst.classValue();
 
 			Instance smiInst = smiArff.getData().get(smiPos.intValue());
 			double smiClassValue = smiInst.classValue();
@@ -199,16 +224,22 @@ public class TheyreAllBad implements Runnable {
 			Instance tsfInst = tsfArff.getData().get(tsfPos.intValue());
 			double tsfClassValue = tsfInst.classValue();
 
-			if (dmiClassValue != macdClassValue | dmiClassValue != mavgClassValue | dmiClassValue != maliClassValue
-					| dmiClassValue != smiClassValue | dmiClassValue != tsfClassValue)
+			if (apoClassValue != /*
+									 * macdClassValue | dmiClassValue != macdClassValue | dmiClassValue !=
+									 * mavgClassValue | dmiClassValue !=
+									 */ maliClassValue | apoClassValue != psarClassValue
+					| apoClassValue != smiClassValue | apoClassValue != tsfClassValue)
+				
 				System.out.println("logic error");
-			pw.print(doInstance(dmiArff.getData(), dmiInst) + ",");
-			pw.print(doInstance(macdArff.getData(), macdInst) + ",");
-			pw.print(doInstance(mavgArff.getData(), mavgInst) + ",");
+			pw.print(doInstance(apoArff.getData(), apoInst) + ",");
+//			pw.print(doInstance(dmiArff.getData(), dmiInst) + ",");
+//			pw.print(doInstance(macdArff.getData(), macdInst) + ",");
+//			pw.print(doInstance(mavgArff.getData(), mavgInst) + ",");
 			pw.print(doInstance(maliArff.getData(), maliInst) + ",");
+			pw.print(doInstance(psarArff.getData(), psarInst) + ",");
 			pw.print(doInstance(smiArff.getData(), smiInst) + ",");
 			pw.print(doInstance(tsfArff.getData(), tsfInst) + ",");
-			pw.println(dmiClassValue);
+			pw.println(apoClassValue);
 			pw.flush();
 		}
 

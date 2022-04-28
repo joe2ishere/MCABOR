@@ -5,15 +5,10 @@ import java.sql.SQLException;
 
 public class SMICorrelationEstimator extends CorrelationEstimator {
 
-	public SMICorrelationEstimator(Connection conn) throws SQLException {
+	public SMICorrelationEstimator(Connection conn, boolean thirtyDayMode) throws SQLException {
 		super(conn);
-		function = "smi2";
-		makeSQL = new SMMakeARFFfromSQL(false, true);
-	}
-
-	public SMICorrelationEstimator(Connection conn, boolean one80Mode) throws SQLException {
-		super(conn);
-		function = "smi2";
+		function = "smi";
+		makeSQL = new SMMakeARFFfromSQL(false, thirtyDayMode);
 	}
 
 }

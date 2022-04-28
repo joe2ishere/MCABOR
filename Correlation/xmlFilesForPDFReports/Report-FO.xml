@@ -1,0 +1,514 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<fo:root xmlns:fo='http://www.w3.org/1999/XSL/Format'>
+
+	  <!-- defines the layout master -->
+	  <fo:layout-master-set>
+	   <fo:simple-page-master master-name='simple'
+	                           page-height='8.5in'
+	                           page-width='11in'
+	                           margin-top='.5in'
+	                           margin-bottom='.24in'
+	                           margin-left='.5in'
+	                           margin-right='.5in'>
+	      <fo:region-body margin-top='.5in'/>
+	      <fo:region-before extent='.5in'/>
+	      <fo:region-after extent='.06in'/>
+	    </fo:simple-page-master>
+	  </fo:layout-master-set>
+
+	  <!-- starts actual layout -->
+	  <fo:page-sequence master-reference='simple'>
+
+	 <fo:static-content flow-name='xsl-region-before'>
+	      <!-- this defines a title level 1-->
+	   
+	      <fo:block  font-size='14pt'
+	            font-family='sans-serif'
+	            line-height='12pt'
+	            space-after.optimum='2pt'
+	            background-color='#B0C4DE'
+	            color='white'
+	            text-align='center'
+	            padding-top='3pt'>
+	        ETF Expectations&#8482;  
+	     </fo:block>
+	 
+             <fo:block  font-size='8pt'
+	            font-family='sans-serif'
+	            line-height='10pt'
+	            space-after.optimum='2pt'
+	            background-color='#B0C4DE'
+	            color='black'
+	            text-align='right'
+	            padding-top='2pt'>
+	       As of <<<<MARKET DATE>>>>
+	     </fo:block>
+	  </fo:static-content>
+   
+	  <fo:static-content flow-name='xsl-region-after'>
+  		<fo:table table-layout='fixed' width='100%'   vertical-align='middle'  display-align='center'>
+	     <fo:table-body>
+	     
+	     <fo:table-row>
+       
+      <fo:table-cell background-color='lightgreen' number-columns-spanned='2' >
+	     	       <fo:block  font-size='12pt'
+	            font-family='Tahoma'
+	            line-height='11pt'
+	            space-after.optimum='2pt'
+	            background-color='#C0C0C0'
+	            color='black'
+	            text-align='center'
+	            padding-top='1pt'>
+	        This is not a recommendation to buy or sell any financial instrument. 
+	     </fo:block>
+	      </fo:table-cell>
+	      </fo:table-row>
+	     
+	     
+	     
+          <fo:table-row>
+           
+	 	   <fo:table-cell number-columns-spanned='2'>
+	        <fo:block  font-size='8.3pt'
+	            font-family='sans-serif'
+	            line-height='12pt'
+	            space-after.optimum='2pt'
+	            background-color='#B0C4DE'
+	            color='black'
+	            text-align='right' vertical-align='middle' 
+	            padding-top='1pt' 
+	            padding-bottom='1pt'>
+	           &#169; <<<<COPYRIGHT YEAR>>>> - McVerry Report, LLC (USA)
+	        </fo:block>
+	       </fo:table-cell>
+	      </fo:table-row>
+	      
+	      
+	     </fo:table-body>
+	    </fo:table>
+	  </fo:static-content>
+
+	  <fo:flow flow-name='xsl-region-body'>
+
+<!-- table start -->
+    <fo:table   border="solid 0.1mm black" table-layout='fixed' width='100%'  
+    text-align='center' vertical-align='middle'  display-align='center'>
+       
+      <fo:table-header  font-size='12pt' >
+ 	    
+ 	   <fo:table-row>
+      	 
+      	<fo:table-cell background-color='lightblue' number-columns-spanned='7' >
+      	<fo:block  font-size='12pt'
+	            font-family='sans-serif'
+	            line-height='11pt'
+	            space-before='0.5in'
+	            space-after.optimum='2pt'
+	            background-color='#B0C4DE'
+	            color='white'
+	            text-align='center'
+	            padding-top='3pt'>
+	         5 Day Period Strongest Bearish and Bullish Indications.
+	     </fo:block>
+      	</fo:table-cell>
+       </fo:table-row>
+ 
+      
+      <fo:table-row background-color='lightgrey' >
+          <fo:table-cell><fo:block>ETF</fo:block></fo:table-cell>
+         
+          <fo:table-cell  background-color='lightblue' font-size='10pt'><fo:block><<<miniblock0>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='10pt'><fo:block><<<miniblock1>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='10pt'><fo:block><<<miniblock2>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='10pt'><fo:block><<<miniblock3>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='10pt'><fo:block><<<miniblock4>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='10pt'><fo:block><<<miniblock5>>></fo:block></fo:table-cell>
+           
+        </fo:table-row>
+        
+    
+        
+      </fo:table-header>
+      <fo:table-body   font-size='9.9pt' border='0.47px solid black'>
+        <<<<ABRIDGED REPORT>>>>
+        
+        
+      </fo:table-body>
+    </fo:table>
+    <!-- table end -->
+    	   
+       
+       
+	 <fo:block  font-size='12pt'
+	            font-family='Tahoma'
+	            line-height='11pt'
+	            space-after.optimum='2pt'
+	            background-color='#C0C0C0'
+	            color='black'  space-before='0.125in' 
+	            text-align='center'
+	            padding-top='1pt'>
+<<<<WEEKLY RECOMMENDATION REQUIREMENT>>>>	
+	     </fo:block>
+	      
+    
+    
+    
+       
+    
+  <fo:block page-break-before="always"/>
+    <fo:table table-layout='fixed' width='100%' border='0.67px solid black'
+     border-separation='3pt'   text-align='center' vertical-align='middle'  display-align='center'>
+      <fo:table-column column-width='21%'/>
+      <fo:table-column/>
+     <fo:table-header  font-size='13pt' >
+      <fo:table-row background-color='lightgrey'>
+          <fo:table-cell  background-color='lightblue' font-size='10pt'><fo:block>Days Out</fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='10pt'><fo:block>Results</fo:block></fo:table-cell>
+        </fo:table-row>
+     </fo:table-header>
+     <fo:table-body   font-size='11pt'>
+        <<<<HISTORY PDF REPORT>>>>
+     </fo:table-body>
+   </fo:table>
+  
+   	 <fo:block  font-size='12pt'
+	            font-family='Tahoma'
+	            line-height='11pt'
+	            space-after.optimum='2pt'
+	            background-color='#C0C0C0'
+	            color='black'  space-before='0.125in' 
+	            text-align='center'
+	            padding-top='1pt'>
+<<<<WEEKLY RECOMMENDATION REQUIREMENT>>>>	
+	     </fo:block>
+	      
+    
+
+    <fo:block page-break-before="always"/>
+    
+  
+  	<fo:block  font-size='14pt'
+	            font-family='sans-serif'
+	            line-height='12pt'
+	            space-before='0.075in'
+	            space-after.optimum='1pt'
+	            background-color='#B0C4DE'
+	            color='white'
+	            text-align='center'
+	            padding-top='2pt'>
+	         Estimated Best  ETF for Each Of The Next 30 Days
+	     </fo:block>
+
+<!-- table start -->
+    <fo:table table-layout='fixed' width='100%'  text-align='center' vertical-align='middle'  
+    	space-before='0.125in' display-align='center'>
+       
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+       
+      
+      <fo:table-header  font-size='9pt' >
+ 	     <!--fo:table-row>
+       
+      <fo:table-cell background-color='lightgrey' number-columns-spanned='30' >
+      <fo:block font-size='10pt'>Forecasted Days Out</fo:block></fo:table-cell>
+      
+      </fo:table-row-->
+ 
+      
+      <fo:table-row background-color='lightgrey' font-size='7pt'>
+<<<<DATE BLOCK>>>         
+        </fo:table-row>
+      </fo:table-header>
+          <fo:table-body   font-size='8.5pt'>
+        <<<<BEST DAILY ETFS>>>>
+      </fo:table-body>
+    </fo:table>
+    
+
+    	<fo:block  font-size='14pt'
+	            font-family='sans-serif'
+	            line-height='12pt'
+	            space-before='0.25in'
+	            space-after.optimum='1pt'
+	            background-color='#B0C4DE'
+	            color='white'
+	            text-align='center'
+	            padding-top='2pt'>
+	        Estimated Worst ETF for Each Of The Next 30 Days
+	     </fo:block>
+
+
+    <fo:table table-layout='fixed' width='100%'  text-align='center' vertical-align='middle'  
+    	space-before='0.125in' display-align='center'>
+       
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      
+      <fo:table-header  font-size='9pt' >
+ 	     <!--fo:table-row>
+       
+      <fo:table-cell background-color='lightgrey' number-columns-spanned='30' >
+                <fo:block font-size='10pt'>Forecasted Days Out</fo:block></fo:table-cell>
+      
+      </fo:table-row-->
+ 
+      <fo:table-row background-color='lightgrey' font-size='7pt'>
+<<<<DATE BLOCK>>>         
+             
+        </fo:table-row>
+      </fo:table-header>
+          <fo:table-body   font-size='8.5pt'>
+        <<<<WORST DAILY ETFS>>>>
+      </fo:table-body>
+    </fo:table>
+       
+    <!-- table end -->
+
+<fo:block space-before='.4in'  > </fo:block>
+ <!-- table start -->
+    <fo:table table-layout='fixed' width='100%'  text-align='center' vertical-align='middle'  display-align='center'>
+       
+      <fo:table-header  font-size='9pt' >
+      <fo:table-row>
+      <fo:table-cell number-columns-spanned='38'>
+        <fo:block  font-size="14pt"
+	            font-family="sans-serif"
+	            line-height="12pt"
+	            space-after.optimum="2pt"
+	            background-color="#B0C4DE"
+	            color="white"
+	            text-align="center"
+	            padding-top="3pt">
+	          30 Day Estimates for the Top 100 ETFs
+	     </fo:block>
+	   </fo:table-cell>
+      </fo:table-row>
+ 	     <fo:table-row>
+       
+      <fo:table-cell background-color='lightgrey' number-columns-spanned='31' ><fo:block font-size='10pt'>Forecast Strength</fo:block></fo:table-cell>
+      <fo:table-cell background-color='lightblue' number-columns-spanned='7' ><fo:block font-size='10pt'>Averages</fo:block></fo:table-cell>
+      </fo:table-row>
+ 
+      
+      <fo:table-row background-color='lightgrey' font-size='7pt'>
+          <fo:table-cell><fo:block>ETF</fo:block></fo:table-cell>
+<<<<DATE BLOCK>>>         
+          <fo:table-cell  background-color='lightblue' font-size='7pt'><fo:block><<<miniblock0>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='7pt'><fo:block><<<miniblock1>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='7pt'><fo:block><<<miniblock2>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='7pt'><fo:block><<<miniblock3>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='7pt'><fo:block><<<miniblock4>>></fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='7pt'><fo:block><<<miniblock5>>></fo:block></fo:table-cell>
+          <!--fo:table-cell  background-color='lightblue' font-size='6pt'><fo:block>1-5</fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='6pt'><fo:block>6-10</fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='6pt'><fo:block>11-15</fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='6pt'><fo:block>16-20</fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='6pt'><fo:block>21-25</fo:block></fo:table-cell>
+          <fo:table-cell  background-color='lightblue' font-size='6pt'><fo:block>26-30</fo:block></fo:table-cell-->
+          <fo:table-cell  background-color='lightblue' font-size='6pt'><fo:block>Total Avg.</fo:block></fo:table-cell>
+        </fo:table-row>
+      </fo:table-header>
+      
+      <fo:table-footer>
+      <fo:table-row>
+      <fo:table-cell number-columns-spanned='13'>
+            <fo:block  font-size='8pt'
+	            font-family='sans-serif'
+	            line-height='9pt'
+	            space-after.optimum='2pt'
+	            background-color='#B0C4DE'
+	            color='black'
+	            text-align='left'
+	            padding-top='2pt'>
+	 	       Scaled from 0 (Extreme Bearishness)  to 9 (Extreme Bullishness)
+	 	    </fo:block>
+	 	   </fo:table-cell>
+	 	   </fo:table-row>
+      </fo:table-footer>
+      
+      
+      <fo:table-body   font-size='8.5pt'>
+        <<<<CELL DATA>>>>
+      </fo:table-body>
+    </fo:table>
+    <!-- table end -->
+
+
+ <fo:block page-break-before="always"/>
+
+	<fo:block  font-size='14pt'
+	            font-family='sans-serif'
+	            line-height='12pt'
+	            space-before='0.125in'
+	            space-after.optimum='1pt'
+	            background-color='#B0C4DE'
+	            color='white'
+	            text-align='center'
+	            padding-top='3pt'>
+	        ETF Expectations&#8482; - 30 Day Estimates For Sectors Using ETF Averages
+	     </fo:block>
+
+<!-- table start -->
+    <fo:table table-layout='fixed' width='100%'  text-align='center' vertical-align='middle'  
+    	space-before='0.125in' display-align='center'>
+      <fo:table-column column-width='7%'/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      <fo:table-column/>
+      
+      
+      <fo:table-header  font-size='9pt' >
+ 	     <!--fo:table-row>
+       
+      <fo:table-cell background-color='lightgrey' number-columns-spanned='31'>
+      <fo:block font-size='10pt'>Forecasted Days Out</fo:block></fo:table-cell>
+      
+      </fo:table-row-->
+ 
+      
+    <fo:table-row background-color='lightgrey' font-size='8pt'>
+          <fo:table-cell><fo:block>Category</fo:block></fo:table-cell>
+<<<<DATE BLOCK>>> 
+        </fo:table-row>
+      </fo:table-header>
+        <fo:table-footer>
+      <fo:table-row>
+      <fo:table-cell number-columns-spanned='10'>
+            <fo:block  font-size='8pt'
+	            font-family='sans-serif'
+	            line-height='9pt'
+	            space-after.optimum='2pt'
+	            background-color='#B0C4DE'
+	            color='black'
+	            text-align='left'
+	            padding-top='2pt'>
+	 	       Scaled from 0 (Extreme Bearishness)  to 9 (Extreme Bullishness)
+	 	    </fo:block>
+	 	   </fo:table-cell>
+	 	   </fo:table-row>
+      </fo:table-footer>
+      
+      
+      <fo:table-body   font-size='8.5pt'>
+        <<<<CATEGORY DATA>>>>
+      </fo:table-body>
+    </fo:table>
+    
+    <!-- table end -->
+
+	<fo:table table-layout='fixed' width='100%'  vertical-align='middle'  background-color='#F5F5F5'
+    	space-before='0.25in' display-align='center'>
+	
+	 <fo:table-column column-width='9%'/>
+     <fo:table-column/>
+ 
+    <fo:table-header border='solid 0.1mm black'>
+	 <fo:table-row>
+      <fo:table-cell border='solid 0.07mm black' text-align='center'>
+        <fo:block font-size='10pt'>
+			Sector  
+		</fo:block>
+	  </fo:table-cell> 
+      <fo:table-cell  border='solid 0.07mm black'>
+        <fo:block font-size='10pt' text-align='left'>    
+	       ETF Symbols
+    	</fo:block>
+       </fo:table-cell>
+ 	 </fo:table-row>    
+	</fo:table-header>
+    <fo:table-body>
+	 <<<<CATEGORY LIST DATA>>>>
+    </fo:table-body>
+	</fo:table>    
+
+
+   </fo:flow>
+</fo:page-sequence>
+  
+</fo:root>

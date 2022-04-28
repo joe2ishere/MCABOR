@@ -9,7 +9,7 @@ public class MAAveragerCorrelationEstimator extends CorrelationEstimator {
 
 	public MAAveragerCorrelationEstimator(Connection conn) throws SQLException {
 		super(conn);
-		function = "maAvg2";
+		function = "maAvg";
 		makeSQL = new MAAveragesMakeARFFfromSQL(false);
 	}
 
