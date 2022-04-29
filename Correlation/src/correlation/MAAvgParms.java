@@ -4,11 +4,9 @@ import java.util.Set;
 import java.util.TreeMap;
 
 public class MAAvgParms implements AttributeParm {
-	public class MAAvgSymbolParm {
-		Integer functionDaysDiff;
-		Integer doubleBacks;
-		TreeMap<String, Integer> dateIndex;
-		MaLineParmToPass mali;
+	public record MAAvgSymbolParm(Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			MaLineParmToPass mali) {
+
 	}
 
 	TreeMap<String, MAAvgSymbolParm> MAAvgPMap;
@@ -22,9 +20,9 @@ public class MAAvgParms implements AttributeParm {
 		return MAAvgPMap.keySet();
 	}
 
-	@Override
-	public void addSymbol(String sym) {
-		MAAvgPMap.put(sym, new MAAvgSymbolParm());
+	public void addSymbol(String sym, Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			MaLineParmToPass mali) {
+		MAAvgPMap.put(sym, new MAAvgSymbolParm(functionDaysDiff, doubleBacks, dateIndex, mali));
 
 	}
 
@@ -34,37 +32,17 @@ public class MAAvgParms implements AttributeParm {
 	}
 
 	@Override
-	public void setDaysDiff(String sym, Integer daysDiff) {
-		MAAvgPMap.get(sym).functionDaysDiff = daysDiff;
-	}
-
-	@Override
 	public Integer getDoubleBacks(String sym) {
 		return MAAvgPMap.get(sym).doubleBacks;
-	}
-
-	@Override
-	public void setDoubleBacks(String sym, Integer doubleBacks) {
-		MAAvgPMap.get(sym).doubleBacks = doubleBacks;
 	}
 
 	public MaLineParmToPass getMALI(String sym) {
 		return MAAvgPMap.get(sym).mali;
 	}
 
-	public void setMALI(String sym, MaLineParmToPass mali) {
-		MAAvgPMap.get(sym).mali = mali;
-	}
-
 	@Override
 	public TreeMap<String, Integer> getDateIndex(String sym) {
 		return MAAvgPMap.get(sym).dateIndex;
-	}
-
-	@Override
-	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
-		MAAvgPMap.get(sym).dateIndex = dateIndex;
-
 	}
 
 }

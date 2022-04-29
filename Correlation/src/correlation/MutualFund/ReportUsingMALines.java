@@ -119,9 +119,7 @@ public class ReportUsingMALines {
 				String symKey = inmaLinesData[1] + "_" + inmaLinesData[3] + "_" + maType.name();
 				MovingAvgAndLineIntercept mal = new MovingAvgAndLineIntercept(pgsd, period, maType, period, maType);
 				MaLineParmToPass ptp = new MaLineParmToPass(mal, pgsd.inClose, null);
-				maap.addSymbol(symKey);
-				maap.setMALI(symKey, ptp);
-				maap.setDateIndex(symKey, pgsd.dateIndex);
+				maap.addSymbol(symKey, 0, 0, pgsd.dateIndex, ptp);
 				maLinesPW.println("@ATTRIBUTE " + symKey + "maLines1 NUMERIC");
 				maLinesPW.println("@ATTRIBUTE " + symKey + "maLines2 NUMERIC");
 				maLinesPW.println("@ATTRIBUTE " + symKey + "maLines3 NUMERIC");

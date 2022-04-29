@@ -4,11 +4,9 @@ import java.util.Set;
 import java.util.TreeMap;
 
 public class APOParms implements AttributeParm {
-	public class APOSymbolParm {
-		Integer functionDaysDiff;
-		Integer doubleBacks;
-		TreeMap<String, Integer> dateIndex;
-		double[] APOs;
+	public record APOSymbolParm(Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			double[] APOs) {
+
 	}
 
 	TreeMap<String, APOSymbolParm> APOPMap;
@@ -22,9 +20,9 @@ public class APOParms implements AttributeParm {
 		return APOPMap.keySet();
 	}
 
-	@Override
-	public void addSymbol(String sym) {
-		APOPMap.put(sym, new APOSymbolParm());
+	public void addSymbol(String sym, Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			double[] APOs) {
+		APOPMap.put(sym, new APOSymbolParm(functionDaysDiff, doubleBacks, dateIndex, APOs));
 
 	}
 
@@ -34,32 +32,13 @@ public class APOParms implements AttributeParm {
 	}
 
 	@Override
-	public void setDaysDiff(String sym, Integer daysDiff) {
-		APOPMap.get(sym).functionDaysDiff = daysDiff;
-	}
-
-	@Override
 	public Integer getDoubleBacks(String sym) {
-		return APOPMap.get(sym).doubleBacks;
-	}
 
-	@Override
-	public void setDoubleBacks(String sym, Integer doubleBacks) {
-		APOPMap.get(sym).doubleBacks = doubleBacks;
+		return APOPMap.get(sym).doubleBacks;
 	}
 
 	public double[] getAPOs(String sym) {
 		return APOPMap.get(sym).APOs;
-	}
-
-	public void setAPOs(String sym, double[] APOs) {
-		APOPMap.get(sym).APOs = APOs;
-	}
-
-	@Override
-	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
-		APOPMap.get(sym).dateIndex = dateIndex;
-
 	}
 
 	@Override

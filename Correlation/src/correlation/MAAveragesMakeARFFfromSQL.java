@@ -103,10 +103,8 @@ public class MAAveragesMakeARFFfromSQL extends AttributeMakerFromSQL {
 			MaLineParmToPass mlp = new MaLineParmToPass(mal, pgsd.inClose, null);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
 
-			parms.addSymbol(symKey);
-			parms.setMALI(symKey, mlp);
-			parms.setDaysDiff(symKey, 0);
-			parms.setDateIndex(symKey, pgsd.dateIndex);
+			parms.addSymbol(symKey, 0, 0, pgsd.dateIndex, mlp);
+
 		}
 
 		return parms;

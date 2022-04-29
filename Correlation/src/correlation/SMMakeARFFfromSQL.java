@@ -8,7 +8,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.LogManager;
 
@@ -20,69 +19,8 @@ import bands.DeltaBands;
 import util.getDatabaseConnection;
 
 public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
-	public class SMISymbolParm {
-		Integer functionDaysDiff;
-		Integer doubleBacks;
-		TreeMap<String, Integer> dateIndex;
-		StochasticMomentum smis;
-	}
-
-	public class SMIParms implements AttributeParm {
-		TreeMap<String, SMISymbolParm> SMIPMap;
-
-		public SMIParms() {
-			SMIPMap = new TreeMap<String, SMISymbolParm>();
-		}
-
-		@Override
-		public Set<String> keySet() {
-			return SMIPMap.keySet();
-		}
-
-		@Override
-		public void addSymbol(String sym) {
-			SMIPMap.put(sym, new SMISymbolParm());
-
-		}
-
-		@Override
-		public Integer getDaysDiff(String sym) {
-			return SMIPMap.get(sym).functionDaysDiff;
-		}
-
-		@Override
-		public void setDaysDiff(String sym, Integer daysDiff) {
-			SMIPMap.get(sym).functionDaysDiff = daysDiff;
-		}
-
-		@Override
-		public Integer getDoubleBacks(String sym) {
-			return SMIPMap.get(sym).doubleBacks;
-		}
-
-		@Override
-		public void setDoubleBacks(String sym, Integer doubleBacks) {
-			SMIPMap.get(sym).doubleBacks = doubleBacks;
-		}
-
-		public StochasticMomentum getSMIs(String sym) {
-			return SMIPMap.get(sym).smis;
-		}
-
-		public void setSMIs(String sym, StochasticMomentum sm) {
-			SMIPMap.get(sym).smis = sm;
-		}
-
-		@Override
-		public TreeMap<String, Integer> getDateIndex(String sym) {
-			return SMIPMap.get(sym).dateIndex;
-		}
-
-		@Override
-		public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
-			SMIPMap.get(sym).dateIndex = dateIndex;
-
-		}
+	public record SMISymbolParm(Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			StochasticMomentum smis) {
 
 	}
 
@@ -163,11 +101,7 @@ public class SMMakeARFFfromSQL extends AttributeMakerFromSQL {
 					MAType.Ema, maPeriod, smSmoothPeriod, smSignalPeriod);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
 
-			parms.addSymbol(symKey);
-			parms.setSMIs(symKey, sm);
-			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
-			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
-			parms.setDateIndex(symKey, pgsd.dateIndex);
+			parms.addSymbol(symKey, rs.getInt("functionDaysDiff"), rs.getInt("doubleBack"), pgsd.dateIndex, sm);
 
 		}
 

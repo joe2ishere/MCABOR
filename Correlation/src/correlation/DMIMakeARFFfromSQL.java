@@ -93,11 +93,7 @@ public class DMIMakeARFFfromSQL extends AttributeMakerFromSQL {
 					outNBElement, dmi);
 			Realign.realign(dmi, outBegIdx.value);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
-			parms.addSymbol(symKey);
-			parms.setDMIs(symKey, dmi);
-			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
-			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
-			parms.setDateIndex(symKey, gsdDMI.dateIndex);
+			parms.addSymbol(symKey, rs.getInt("functionDaysDiff"), rs.getInt("doubleBack"), gsdDMI.dateIndex, dmi);
 		}
 		return parms;
 	}

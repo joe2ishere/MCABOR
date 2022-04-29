@@ -75,7 +75,7 @@ public class ATRMakeARFFfromSQL extends AttributeMakerFromSQL {
 	@Override
 	public AttributeParm buildParameters(String sym, int daysOut, Connection conn) throws Exception {
 		Core core = new Core();
-		DMIParms parms = new DMIParms();
+		ATRParms parms = new ATRParms();
 
 		PreparedStatement ps = conn.prepareStatement("select * from atr_correlation" + (makeWith30Days ? "" : "_130")
 				+ " where symbol=? and toCloseDays=?  ");
@@ -84,20 +84,16 @@ public class ATRMakeARFFfromSQL extends AttributeMakerFromSQL {
 		ResultSet rs = ps.executeQuery();
 		while (rs.next()) {
 			String functionSymbol = rs.getString("functionSymbol");
-			GetETFDataUsingSQL gsdDMI = GetETFDataUsingSQL.getInstance(functionSymbol);
+			GetETFDataUsingSQL gsdATR = GetETFDataUsingSQL.getInstance(functionSymbol);
 			int atrPeriod = rs.getInt("atrPeriod");
-			double atr[] = new double[gsdDMI.inClose.length];
+			double atr[] = new double[gsdATR.inClose.length];
 			MInteger outBegIdx = new MInteger();
 			MInteger outNBElement = new MInteger();
-			core.atr(0, gsdDMI.inClose.length - 1, gsdDMI.inHigh, gsdDMI.inLow, gsdDMI.inClose, atrPeriod, outBegIdx,
+			core.atr(0, gsdATR.inClose.length - 1, gsdATR.inHigh, gsdATR.inLow, gsdATR.inClose, atrPeriod, outBegIdx,
 					outNBElement, atr);
 			Realign.realign(atr, outBegIdx.value);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
-			parms.addSymbol(symKey);
-			parms.setDMIs(symKey, atr);
-			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
-			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
-			parms.setDateIndex(symKey, gsdDMI.dateIndex);
+			parms.addSymbol(symKey, rs.getInt("functionDaysDiff"), rs.getInt("doubleBack"), gsdATR.dateIndex, atr);
 		}
 		return parms;
 	}
@@ -275,7 +271,7 @@ public class ATRMakeARFFfromSQL extends AttributeMakerFromSQL {
 					}
 				}
 
-			double atrs[] = ((DMIParms) parms).getDMIs(key);
+			double atrs[] = ((ATRParms) parms).getATRs(key);
 			Integer doubleBack = parms.getDoubleBacks(key);
 			if (doubleBack == null)
 				doubleBack = 0;

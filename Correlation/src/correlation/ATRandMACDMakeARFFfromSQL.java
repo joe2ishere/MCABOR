@@ -302,7 +302,8 @@ public class ATRandMACDMakeARFFfromSQL extends AttributeMakerFromSQL {
 						return null;
 					}
 				}
-			double atrs[] = ((DMIParms) atrParms).getDMIs(key);
+
+			double atrs[] = ((ATRParms) atrParms).getATRs(key);
 			Integer doubleBack = atrParms.getDoubleBacks(key);
 			if (doubleBack == null)
 				doubleBack = 0;

@@ -4,11 +4,9 @@ import java.util.Set;
 import java.util.TreeMap;
 
 public class DMIParms implements AttributeParm {
-	public class DMISymbolParm {
-		Integer functionDaysDiff;
-		Integer doubleBacks;
-		TreeMap<String, Integer> dateIndex;
-		double[] DMIs;
+	public record DMISymbolParm(Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			double[] DMIs) {
+
 	}
 
 	TreeMap<String, DMISymbolParm> DMIPMap;
@@ -17,15 +15,15 @@ public class DMIParms implements AttributeParm {
 		DMIPMap = new TreeMap<String, DMISymbolParm>();
 	}
 
-	@Override
-	public Set<String> keySet() {
-		return DMIPMap.keySet();
+	public void addSymbol(String sym, Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			double[] DMIs) {
+		DMIPMap.put(sym, new DMISymbolParm(functionDaysDiff, doubleBacks, dateIndex, DMIs));
+
 	}
 
 	@Override
-	public void addSymbol(String sym) {
-		DMIPMap.put(sym, new DMISymbolParm());
-
+	public Set<String> keySet() {
+		return DMIPMap.keySet();
 	}
 
 	@Override
@@ -34,32 +32,12 @@ public class DMIParms implements AttributeParm {
 	}
 
 	@Override
-	public void setDaysDiff(String sym, Integer daysDiff) {
-		DMIPMap.get(sym).functionDaysDiff = daysDiff;
-	}
-
-	@Override
 	public Integer getDoubleBacks(String sym) {
 		return DMIPMap.get(sym).doubleBacks;
 	}
 
-	@Override
-	public void setDoubleBacks(String sym, Integer doubleBacks) {
-		DMIPMap.get(sym).doubleBacks = doubleBacks;
-	}
-
 	public double[] getDMIs(String sym) {
 		return DMIPMap.get(sym).DMIs;
-	}
-
-	public void setDMIs(String sym, double[] DMIs) {
-		DMIPMap.get(sym).DMIs = DMIs;
-	}
-
-	@Override
-	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
-		DMIPMap.get(sym).dateIndex = dateIndex;
-
 	}
 
 	@Override

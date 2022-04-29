@@ -106,12 +106,8 @@ public class MACDMakeARFFfromSQL extends AttributeMakerFromSQL {
 			Realign.realign(outMACDHist, outBegIdx);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
 
-			parms.addSymbol(symKey);
-			parms.setMACD(symKey, outMACD);
-			parms.setSignal(symKey, outMACDSignal);
-			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
-			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
-			parms.setDateIndex(symKey, pgsd.dateIndex);
+			parms.addSymbol(symKey, rs.getInt("functionDaysDiff"), rs.getInt("doubleBack"), pgsd.dateIndex, outMACD,
+					outMACDSignal);
 
 		}
 

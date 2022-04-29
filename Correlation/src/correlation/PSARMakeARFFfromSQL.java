@@ -104,12 +104,7 @@ public class PSARMakeARFFfromSQL extends AttributeMakerFromSQL {
 
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
 
-			parms.addSymbol(symKey);
-			parms.setPSAR(symKey, outPSAR);
-
-			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
-			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
-			parms.setDateIndex(symKey, pgsd.dateIndex);
+			parms.addSymbol(symKey, rs.getInt("functionDaysDiff"), rs.getInt("doubleBack"), pgsd.dateIndex, outPSAR);
 
 		}
 

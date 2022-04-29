@@ -4,12 +4,8 @@ import java.util.Set;
 import java.util.TreeMap;
 
 public class PSARParms implements AttributeParm {
-	public class PSARSymbolParm {
-		Integer functionDaysDiff;
-		Integer doubleBacks;
-		TreeMap<String, Integer> dateIndex;
-
-		double[] psar;
+	public record PSARSymbolParm(Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			double[] psar) {
 
 	}
 
@@ -24,9 +20,9 @@ public class PSARParms implements AttributeParm {
 		return PSARPMap.keySet();
 	}
 
-	@Override
-	public void addSymbol(String sym) {
-		PSARPMap.put(sym, new PSARSymbolParm());
+	public void addSymbol(String sym, Integer functionDaysDiff, Integer doubleBacks, TreeMap<String, Integer> dateIndex,
+			double[] psar) {
+		PSARPMap.put(sym, new PSARSymbolParm(functionDaysDiff, doubleBacks, dateIndex, psar));
 	}
 
 	@Override
@@ -35,32 +31,12 @@ public class PSARParms implements AttributeParm {
 	}
 
 	@Override
-	public void setDaysDiff(String sym, Integer daysDiff) {
-		PSARPMap.get(sym).functionDaysDiff = daysDiff;
-	}
-
-	@Override
 	public Integer getDoubleBacks(String sym) {
 		return PSARPMap.get(sym).doubleBacks;
 	}
 
-	@Override
-	public void setDoubleBacks(String sym, Integer doubleBacks) {
-		PSARPMap.get(sym).doubleBacks = doubleBacks;
-	}
-
 	public double[] getPSAR(String sym) {
 		return PSARPMap.get(sym).psar;
-	}
-
-	public void setPSAR(String sym, double[] psar) {
-		PSARPMap.get(sym).psar = psar;
-	}
-
-	@Override
-	public void setDateIndex(String sym, TreeMap<String, Integer> dateIndex) {
-		PSARPMap.get(sym).dateIndex = dateIndex;
-
 	}
 
 	@Override

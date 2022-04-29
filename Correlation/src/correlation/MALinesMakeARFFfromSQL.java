@@ -104,10 +104,7 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 			MaLineParmToPass mlp = new MaLineParmToPass(mal, pgsd.inClose, null);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
 
-			parms.addSymbol(symKey);
-			parms.setMALI(symKey, mlp);
-			parms.setDateIndex(symKey, pgsd.dateIndex);
-			parms.setDaysDiff(symKey, 0);
+			parms.addSymbol(symKey, 0, 0, pgsd.dateIndex, mlp);
 
 		}
 

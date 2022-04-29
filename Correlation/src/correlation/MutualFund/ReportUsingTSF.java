@@ -119,11 +119,7 @@ public class ReportUsingTSF {
 				double[] tsf = new double[pgsd.inClose.length];
 				core.tsf(0, pgsd.inClose.length - 1, pgsd.inClose, tsfPeriod, outBegIdx, outNBElement, tsf);
 				// ArrayList<double[]> tsfands = new ArrayList<>();
-				tsfp.addSymbol(symKey);
-				tsfp.settsfs(symKey, tsf);
-				tsfp.setDoubleBacks(symKey, daysDiff);
-				tsfp.setDaysDiff(symKey, tsfDiffDays);
-				tsfp.setDateIndex(symKey, pgsd.dateIndex);
+				tsfp.addSymbol(symKey, tsfDiffDays, daysDiff, pgsd.dateIndex, tsf);
 
 				tsfPW.println("@ATTRIBUTE " + symKey + "tsf NUMERIC");
 				tsfPW.println("@ATTRIBUTE " + symKey + "tsfBack NUMERIC");

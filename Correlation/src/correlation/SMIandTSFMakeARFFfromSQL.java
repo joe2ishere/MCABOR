@@ -12,7 +12,6 @@ import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 
 import StochasticMomentum.StochasticMomentum;
 import bands.DeltaBands;
-import correlation.SMMakeARFFfromSQL.SMIParms;
 import util.getDatabaseConnection;
 
 public class SMIandTSFMakeARFFfromSQL extends AttributeMakerFromSQL {

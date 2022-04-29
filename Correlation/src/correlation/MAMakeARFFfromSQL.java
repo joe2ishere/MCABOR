@@ -105,11 +105,8 @@ public class MAMakeARFFfromSQL extends AttributeMakerFromSQL {
 					ma);
 			Realign.realign(ma, outBegIdx.value);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
-			parms.addSymbol(symKey);
-			parms.setMAs(symKey, ma);
-			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
-			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
-			parms.setDateIndex(symKey, gsdMA.dateIndex);
+			parms.addSymbol(symKey, rs.getInt("functionDaysDiff"), rs.getInt("doubleBack"), gsdMA.dateIndex, ma);
+
 		}
 		return parms;
 	}

@@ -99,11 +99,7 @@ public class TSFMakeARFFfromSQL extends AttributeMakerFromSQL {
 			Realign.realign(tsf, outBegIdx.value);
 			String symKey = functionSymbol + "_" + rs.getInt("significantPlace");
 
-			parms.addSymbol(symKey);
-			parms.settsfs(symKey, tsf);
-			parms.setDoubleBacks(symKey, rs.getInt("doubleBack"));
-			parms.setDaysDiff(symKey, rs.getInt("functionDaysDiff"));
-			parms.setDateIndex(symKey, gsdTSF.dateIndex);
+			parms.addSymbol(symKey, rs.getInt("functionDaysDiff"), rs.getInt("doubleBack"), gsdTSF.dateIndex, tsf);
 
 		}
 
