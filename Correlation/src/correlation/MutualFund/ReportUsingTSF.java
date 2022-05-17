@@ -16,8 +16,8 @@ import com.tictactec.ta.lib.Core;
 import com.tictactec.ta.lib.MInteger;
 
 import bands.DeltaBands;
-import correlation.TSFMakeARFFfromSQL;
-import correlation.TSFParms;
+import correlation.ARFFMaker.TSFMakeARFFfromSQL;
+import correlation.ARFFMaker.Parms.TSFParms;
 import util.Averager;
 import util.getDatabaseConnection;
 import weka.classifiers.lazy.IBk;

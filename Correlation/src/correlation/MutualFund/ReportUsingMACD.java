@@ -17,7 +17,7 @@ import com.tictactec.ta.lib.Core;
 import com.tictactec.ta.lib.MInteger;
 
 import bands.DeltaBands;
-import correlation.MACDMakeARFFfromSQL;
+import correlation.ARFFMaker.MACDMakeARFFfromSQL;
 import util.Averager;
 import util.Realign;
 import util.getDatabaseConnection;

@@ -24,7 +24,7 @@ public class PerformanceOfyBuyGroups {
 		DecimalFormat df3 = new DecimalFormat("#.000");
 		Connection connRemote = getDatabaseConnection.makeMcVerryReportConnection();
 		PreparedStatement psRemote = connRemote.prepareStatement(
-				"select currentReport, dateOfReport from forecastReport where currentReport like ? ORDER BY dateOfReport asc");
+				"select currentReport, dateOfReport from forecastReport where currentReport like ?  ORDER BY dateOfReport asc");
 		Connection conn = getDatabaseConnection.makeConnection();
 
 		PreparedStatement psGetGuesses = conn

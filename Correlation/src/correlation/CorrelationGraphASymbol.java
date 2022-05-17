@@ -26,6 +26,13 @@ import org.knowm.xchart.style.markers.SeriesMarkers;
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 
 import bands.DeltaBands;
+import correlation.Estimators.CorrelationEstimator;
+import correlation.Estimators.DMICorrelationEstimator;
+import correlation.Estimators.MAAveragerCorrelationEstimator;
+import correlation.Estimators.MACDCorrelationEstimator;
+import correlation.Estimators.MALinesCorrelationEstimator;
+import correlation.Estimators.SMICorrelationEstimator;
+import correlation.Estimators.TSFCorrelationEstimator;
 import util.Averager;
 import util.getDatabaseConnection;
 import utils.StandardDeviation;

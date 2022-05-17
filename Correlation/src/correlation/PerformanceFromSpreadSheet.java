@@ -10,6 +10,7 @@ import java.util.TreeMap;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 
+import correlation.Estimators.CorrelationEstimator;
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;

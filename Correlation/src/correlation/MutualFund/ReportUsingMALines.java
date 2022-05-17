@@ -15,9 +15,9 @@ import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 import com.tictactec.ta.lib.MAType;
 
 import bands.DeltaBands;
-import correlation.MAAvgParms;
-import correlation.MALinesMakeARFFfromSQL;
-import correlation.MaLineParmToPass;
+import correlation.ARFFMaker.MALinesMakeARFFfromSQL;
+import correlation.ARFFMaker.Parms.MAAvgParms;
+import correlation.ARFFMaker.Parms.MaLineParmToPass;
 import movingAvgAndLines.MovingAvgAndLineIntercept;
 import util.Averager;
 import util.getDatabaseConnection;

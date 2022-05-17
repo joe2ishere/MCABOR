@@ -42,7 +42,7 @@ public class UpdateResults {
 		PreparedStatement containsStatement = conn.prepareStatement("select count(*) from correlationfunctionresults"
 				+ debugAppend + " where symbol = ? and function = ? and mktDate = ? and daysout = ? ");
 		PreparedStatement insertFunctionResults = conn.prepareStatement("insert into correlationfunctionresults"
-				+ debugAppend + debugAppend + " (symbol, function, mktDate, daysOut, guess) " + " values(?,?,?,?,?) ");
+				+ debugAppend + " (symbol, function, mktDate, daysOut, guess) " + " values(?,?,?,?,?) ");
 		PreparedStatement updateFunctionResults = conn
 				.prepareStatement("update correlationfunctionresults" + debugAppend + " set guess = (guess + ?) / 2  "
 						+ " where symbol = ? and function = ? and mktDate = ? and daysout = ? ");

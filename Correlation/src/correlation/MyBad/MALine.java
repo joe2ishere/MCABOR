@@ -2,7 +2,7 @@ package correlation.MyBad;
 
 import java.io.FileReader;
 
-import correlation.MALinesMakeARFFfromSQL;
+import correlation.ARFFMaker.MALinesMakeARFFfromSQL;
 import util.getDatabaseConnection;
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;

@@ -27,7 +27,7 @@ public class PDFReport {
 
 	}
 
-	static String makeReport(InputStream is, String rptDate, String version) throws Exception {
+	public static String makeReport(InputStream is, String rptDate, String version) throws Exception {
 
 		FopFactory fopFactory = FopFactory.newInstance(new File("xmlFilesForPDFReports/fop.xconf"));
 

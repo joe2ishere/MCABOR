@@ -12,6 +12,7 @@ import java.util.TreeMap;
 
 import com.americancoders.dataGetAndSet.GetETFDataUsingSQL;
 
+import correlation.Estimators.CorrelationEstimator;
 import util.Averager;
 import util.getDatabaseConnection;
 
