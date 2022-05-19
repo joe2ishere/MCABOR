@@ -204,6 +204,7 @@ public class BuildSQLTable {
 			stInsert.setDouble(8, DoubleBackDMICorrelation.getCorr(keyIn));
 			stInsert.addBatch();
 		}
+		fr.close();
 		stInsert.executeBatch();
 		stInsert.close();
 		conn.commit();
@@ -269,7 +270,7 @@ public class BuildSQLTable {
 				+ " values (?,?,?,?,?,?,?,?,?,?,?)");
 
 		FileReader fr = new FileReader("smiDoubleTaB130Days.txt");
-		@SuppressWarnings("resource")
+
 		BufferedReader br = new BufferedReader(fr);
 		String in = "";
 
@@ -306,6 +307,7 @@ public class BuildSQLTable {
 			stInsert.setDouble(11, DoubleBackSMICorrelation.getcorr(keyIn));
 			stInsert.addBatch();
 		}
+		fr.close();
 		stInsert.executeBatch();
 		stInsert.close();
 		conn.commit();
@@ -348,6 +350,7 @@ public class BuildSQLTable {
 			stInsert.setDouble(10, DoubleBackMACDCorrelation.getCorr(keyIn));
 			stInsert.addBatch();
 		}
+
 		stInsert.executeBatch();
 		stInsert.close();
 		conn.commit();
@@ -394,6 +397,7 @@ public class BuildSQLTable {
 			stInsert.setDouble(10, DoubleBackMACDCorrelation.getCorr(keyIn));
 			stInsert.addBatch();
 		}
+		fr.close();
 		stInsert.executeBatch();
 		stInsert.close();
 		conn.commit();
@@ -558,6 +562,7 @@ public class BuildSQLTable {
 			stInsert.setDouble(8, DoubleBackTSFCorrelation.getCorr(keyIn));
 			stInsert.addBatch();
 		}
+		fr.close();
 		stInsert.executeBatch();
 		stInsert.close();
 		conn.commit();
@@ -598,6 +603,7 @@ public class BuildSQLTable {
 			stInsert.setDouble(9, DoubleBackMACorrelation.getCorr(keyIn));
 			stInsert.addBatch();
 		}
+		fr.close();
 		stInsert.executeBatch();
 		stInsert.close();
 		conn.commit();

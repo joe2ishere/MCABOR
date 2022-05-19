@@ -65,6 +65,7 @@ public class CorrelationFunctionPerformance {
 				newAvg.add(Double.parseDouble(ins[i]) / Double.parseDouble(ins[i + 1]));
 			}
 		}
+		br.close();
 
 		return functionDayAverager;
 	}

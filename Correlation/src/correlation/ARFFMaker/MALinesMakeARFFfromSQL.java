@@ -80,8 +80,6 @@ public class MALinesMakeARFFfromSQL extends AttributeMakerFromSQL {
 		PreparedStatement ps = conn
 				.prepareStatement("select * from maline_correlation" + " where symbol=? and toCloseDays=?");
 
-		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-
 		ps.setString(1, sym);
 		ps.setInt(2, daysOut);
 		ResultSet rs = ps.executeQuery();

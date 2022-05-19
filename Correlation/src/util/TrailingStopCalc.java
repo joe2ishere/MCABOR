@@ -11,7 +11,7 @@ import utils.StandardDeviation;
 public class TrailingStopCalc {
 
 	public static void main(String[] args) throws Exception {
-		int period = 2;
+		int period = 20;
 		System.out.println("Period is set to " + period + " days.");
 		System.out.println("enter symbol");
 		DecimalFormat df = new DecimalFormat("#.000");

@@ -89,8 +89,10 @@ public class MAandLIMakeARFFfromCorrelationFile {
 				}
 			}
 		}
+		br.close();
 		if (!found) {
 			System.out.println(sym + " not found");
+			pw.close();
 			return;
 		}
 		while ((in = br.readLine().trim()) != null) {

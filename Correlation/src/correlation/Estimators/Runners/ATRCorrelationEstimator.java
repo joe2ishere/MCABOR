@@ -1,4 +1,4 @@
-package correlation.Estimators;
+package correlation.Estimators.Runners;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import correlation.ARFFMaker.ATRMakeARFFfromSQL;
 import weka.classifiers.Classifier;
 
-public class ATRCorrelationEstimator extends CorrelationEstimator {
+public class ATRCorrelationEstimator extends CorrelationEstimatorRunner {
 
 	public ATRCorrelationEstimator(Connection conn, boolean thirtyDayMode) throws SQLException {
 		super(conn);

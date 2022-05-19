@@ -1,4 +1,4 @@
-package correlation.Estimators;
+package correlation.Estimators.Runners;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import correlation.ARFFMaker.MAMakeARFFfromSQL;
 import weka.classifiers.Classifier;
 
-public class MACorrelationEstimator extends CorrelationEstimator {
+public class MACorrelationEstimator extends CorrelationEstimatorRunner {
 
 	public MACorrelationEstimator(Connection conn) throws SQLException {
 		super(conn);

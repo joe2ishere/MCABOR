@@ -1,22 +1,21 @@
-package correlation.Estimators;
+package correlation.Estimators.Runners;
 
-import java.io.File;
 import java.io.StringReader;
-import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
+import java.util.TreeMap;
 
+import bands.DeltaBands;
 import correlation.ARFFMaker.MACDMakeARFFfromSQL;
 import correlation.ARFFMaker.SMIandMACDMakeARFFfromSQL;
 import correlation.ARFFMaker.SMMakeARFFfromSQL;
 import correlation.ARFFMaker.Parms.AttributeParm;
+import utils.StandardDeviation;
 import weka.classifiers.Classifier;
 import weka.classifiers.lazy.IBk;
 import weka.core.Instances;
 
-public class SMIandMACDCorrelationEstimator extends CorrelationEstimator {
+public class SMIandMACDCorrelationEstimator extends CorrelationEstimatorRunner {
 
 	SMMakeARFFfromSQL smi_makeSQL;
 	MACDMakeARFFfromSQL macd_makeSQL;
@@ -35,7 +34,9 @@ public class SMIandMACDCorrelationEstimator extends CorrelationEstimator {
 	}
 
 	@Override
-	public double prun() throws Exception {
+	public double prun(String sym, int daysOut, DeltaBands priceBands,
+			TreeMap<Integer, StandardDeviation> avgForDaysOut2, TreeMap<String, Double> theBadness, boolean whichHalf)
+			throws Exception {
 		AttributeParm smiParms = null;
 		AttributeParm macdParms = null;
 
@@ -49,53 +50,8 @@ public class SMIandMACDCorrelationEstimator extends CorrelationEstimator {
 
 		String $instances = null;
 		try {
-			File instanceFile = new File("c:/users/joe/correlationARFF/" + function + "/" + sym + "/D" + daysOut
-					+ (whichHalf ? "f" : "s") + ".zrff");
 
-			if (instanceFile.exists()) {
-				synchronized (conn) {
-					/*
-					 * BufferedReader br = new BufferedReader(new FileReader(instanceFile));
-					 * StringBuilder builder = new StringBuilder(250000); char[] buffer = new
-					 * char[4096]; int numChars; while ((numChars = br.read(buffer)) > 0) {
-					 * builder.append(buffer, 0, numChars); } byte[] output =
-					 * builder.toString().getBytes(StandardCharsets.UTF_8);br.close(); builder = new
-					 * StringBuilder(250000);
-					 */
-					byte[] output = Files.readAllBytes(instanceFile.toPath());
-					Inflater inflater = new Inflater();
-					inflater.setInput(output);
-					StringBuilder builder = new StringBuilder(250000);
-					while (inflater.finished() == false) {
-						byte b100[] = new byte[100];
-						int len2 = inflater.inflate(b100);
-						builder.append(new String(b100, 0, len2, "Cp1252"));
-					}
-					inflater.end();
-					$instances = builder.toString();
-				}
-			} else {
-				$instances = makeSQL.makeARFFFromSQL(sym, daysOut, smiParms, macdParms, whichHalf);
-				byte[] bytes = $instances.getBytes("Cp1252");
-				byte[] output = new byte[bytes.length / 2];
-				Deflater deflater = new Deflater();
-				deflater.setInput(bytes);
-				deflater.finish();
-				int len = deflater.deflate(output);
-				File dirFile = new File("c:/users/joe/correlationARFF/" + function);
-				if (dirFile.exists() == false) {
-//				dirFile.createNewFile();
-					dirFile.mkdir();
-				}
-				dirFile = new File("c:/users/joe/correlationARFF/" + function + "/" + sym);
-				if (dirFile.exists() == false) {
-//				dirFile.createNewFile();
-					dirFile.mkdir();
-				}
-				instanceFile.createNewFile();
-				Files.write(instanceFile.toPath(), output);
-
-			}
+			$instances = makeSQL.makeARFFFromSQL(sym, daysOut, smiParms, macdParms, whichHalf);
 
 		} catch (Exception e1) {
 			e1.printStackTrace();

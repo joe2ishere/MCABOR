@@ -186,6 +186,8 @@ public class PerformanceOfyBuyGroups {
 					+ df.format(100 * (groupAverage.get() - 1)) + "<td>" + df.format(100 * groupSuccess.get()) + "<td>"
 					+ df0.format(groupAverage.getCount()));
 		}
+		symavgpw.flush();
+		symavgpw.close();
 //		for (int ii = 0; ii <= 90; ii++) {
 //			System.out.print(ii + ";");
 //			for (int i = 0; i <= 5; i++) {

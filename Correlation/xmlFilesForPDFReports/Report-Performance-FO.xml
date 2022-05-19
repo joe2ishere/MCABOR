@@ -94,17 +94,22 @@
    <fo:table-row >
       
           <fo:table-cell><fo:block>Date</fo:block></fo:table-cell>
-          <fo:table-cell><fo:block>All Calls % Correct</fo:block></fo:table-cell>
-          <fo:table-cell><fo:block>Buy Calls % Correct</fo:block></fo:table-cell>
-          <fo:table-cell><fo:block>Sell Calls % Correct</fo:block></fo:table-cell>
-          <fo:table-cell><fo:block>Buy Calls - Average % Change</fo:block></fo:table-cell>
-          <fo:table-cell><fo:block>Sell Calls - Average % Change</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>All Calls Made - % Correct</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Buy Calls Made - % Correct</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Sell Calls Made - % Correct</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Results of All Buy Calls Made - Average % Change</fo:block></fo:table-cell>
+          <fo:table-cell><fo:block>Results of All Sell Calls Made - Average % Change</fo:block></fo:table-cell>
      </fo:table-row>     
     </fo:table-header>  
     <fo:table-body   font-size='8.5pt'>
            <!--   <<<<% correct for calls for date>>>> -->
     </fo:table-body>
 </fo:table>
+
+    <fo:block text-indent='.333in' font-size='10pt' space-before='.388in'>
+ <<<<DAILY RECOMMENDATION REQUIREMENT>>>>
+    </fo:block>
+
 
 <fo:block page-break-before="always"/>
 
@@ -158,7 +163,11 @@
       </fo:table-body>
     </fo:table>
     
-    <fo:block text-indent='.333in' font-size='12pt' space-before='.388in'>The above percentages are computed on per daily basis. 
+    <fo:block text-indent='.333in' font-size='12pt' space-before='.388in'>
+ <<<<DAILY RECOMMENDATION REQUIREMENT>>>>
+    </fo:block>
+    
+    <fo:block text-indent='.333in' font-size='12pt' space-before='.188in'>The above percentages are computed on per daily basis. 
     Note that the ratios are more divergent than the "5 Days Performance Percentages" presented at the top main report. 
     The daily inaccuracy is the main reason I prefer to use estimates based on averages over an extended period, such as 1-5 Days, 6 - 10 Days, etc.
     </fo:block>
@@ -209,9 +218,19 @@
       
    
   <fo:block text-indent='.333in' font-size='6.25pt'>11. Added double balanced instances.   
-          2022-02-17
+          2022-02-25
    </fo:block>
-      
+   
+   <fo:block text-indent='.333in' font-size='6.25pt'>12. A Buy indicator must have a value greater than 7.25. 
+        A Sell indicator must have a value less than 1.75.  2022-02-25
+     </fo:block>
+ 
+   <fo:block text-indent='.333in' font-size='6.25pt'>13. Added ETFs $DRIP and $GUSH.  $GUSH added to 
+   Energy sector list.  2022-05-12
+     </fo:block>
+ 
+   
+   
    
 	    </fo:flow>
 	</fo:page-sequence>

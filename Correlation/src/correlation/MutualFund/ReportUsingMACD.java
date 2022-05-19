@@ -238,6 +238,7 @@ public class ReportUsingMACD {
 
 			}
 		}
+		macdBR.close();
 		System.out.println(avg.get());
 	}
 

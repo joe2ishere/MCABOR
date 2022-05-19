@@ -1,18 +1,21 @@
-package correlation.Estimators;
+package correlation.Estimators.Runners;
 
 import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.TreeMap;
 
+import bands.DeltaBands;
 import correlation.ARFFMaker.SMIandTSFMakeARFFfromSQL;
 import correlation.ARFFMaker.SMMakeARFFfromSQL;
 import correlation.ARFFMaker.TSFMakeARFFfromSQL;
 import correlation.ARFFMaker.Parms.AttributeParm;
+import utils.StandardDeviation;
 import weka.classifiers.Classifier;
 import weka.classifiers.lazy.IBk;
 import weka.core.Instances;
 
-public class SMIandTSFCorrelationEstimator extends CorrelationEstimator {
+public class SMIandTSFCorrelationEstimator extends CorrelationEstimatorRunner {
 
 	SMMakeARFFfromSQL smi_makeSQL;
 	TSFMakeARFFfromSQL tsf_makeSQL;
@@ -31,7 +34,9 @@ public class SMIandTSFCorrelationEstimator extends CorrelationEstimator {
 	}
 
 	@Override
-	public double prun() throws Exception {
+	public double prun(String sym, int daysOut, DeltaBands priceBands,
+			TreeMap<Integer, StandardDeviation> avgForDaysOut2, TreeMap<String, Double> theBadness, boolean whichHalf)
+			throws Exception {
 		AttributeParm smiParms = null;
 		AttributeParm tsfParms = null;
 
