@@ -115,19 +115,25 @@ public class MACDMakeARFFfromSQL extends AttributeMakerFromSQL {
 		return parms;
 	}
 
-	public void printAttributeHeader(PrintWriter pw, String sym, int daysOut, DeltaBands db, AttributeParm parms) {
-		pw.println("% 1. Title: " + sym + "_macd_correlation");
-		pw.println("@RELATION " + sym + "_" + daysOut);
+	@Override
+	public void printAttributeHeader(PrintWriter pw, String sym, int daysOut, DeltaBands db, AttributeParm parms,
+			boolean allHeaderFields) {
+		if (allHeaderFields) {
+			pw.println("% 1. Title: " + sym + "_macd_correlation");
+			pw.println("@RELATION " + sym + "_" + daysOut);
+		}
 
 		for (String symKey : parms.keySet()) {
 			pw.println("@ATTRIBUTE " + symKey + "macd NUMERIC");
 			pw.println("@ATTRIBUTE " + symKey + "macd2 NUMERIC");
 		}
 
-		if (withAttributePosition)
-			pw.println("@ATTRIBUTE class NUMERIC");
-		else
-			pw.println(db.getAttributeDefinition());
+		if (allHeaderFields) {
+			if (withAttributePosition)
+				pw.println("@ATTRIBUTE class NUMERIC");
+			else
+				pw.println(db.getAttributeDefinition());
+		}
 
 	}
 

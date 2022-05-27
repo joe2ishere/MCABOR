@@ -57,11 +57,11 @@ public class TSFMakeARFFfromSQL extends AttributeMakerFromSQL {
 			break;
 		}
 		sin.close();
-		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(false, true);
+		TSFMakeARFFfromSQL tsf = new TSFMakeARFFfromSQL(false, false);
 		Connection conn = getDatabaseConnection.makeConnection();
 		int daysOut = Integer.parseInt(dos);
 		AttributeParm parms = tsf.buildParameters(sym, daysOut, conn);
-		String data = tsf.makeARFFFromSQL(sym, daysOut, parms, false);
+		String data = tsf.makeARFFFromSQL(sym, daysOut, parms, true);
 		File file = new File(getFilename(sym, daysOut));
 		PrintWriter pw = new PrintWriter(file);
 		pw.print(data);

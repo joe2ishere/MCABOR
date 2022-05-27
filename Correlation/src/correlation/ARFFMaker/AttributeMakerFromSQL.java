@@ -39,7 +39,17 @@ public abstract class AttributeMakerFromSQL {
 			throws Exception {
 
 		GetETFDataUsingSQL gsd = GetETFDataUsingSQL.getInstance(sym);
-		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5);
+		DeltaBands db = new DeltaBands(gsd.inClose, daysOut, 5, startWithLargeGroup);
+
+		/*
+		 * TreeMap<String, Integer> counters = new TreeMap<>(); for (int i = 0; i <
+		 * gsd.inClose.length - daysOut; i++) { String got = (db.getAttributeValue(i,
+		 * daysOut, gsd.inClose)); Integer gotI = counters.get(got); if (gotI == null) {
+		 * gotI = 0; counters.put(got, gotI); } gotI++; counters.replace(got, gotI); }
+		 * for (String key : counters.keySet()) { System.out.println(key + ";" +
+		 * counters.get(key)); }
+		 */
+
 		int pos = 25 + daysOut;
 		String startDate = setStartDate(gsd.inDate[pos], parms);
 		StringWriter sw = new StringWriter();

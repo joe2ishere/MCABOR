@@ -49,6 +49,7 @@ import bands.DeltaBands;
 import correlation.PDFReport;
 import correlation.PerformanceFromDBForPDF;
 import correlation.ReportForStockTwits;
+import correlation.StreakFinder;
 import correlation.UpdateResults;
 import correlation.Estimators.CorrelationDoBad.CDBRecord;
 import correlation.Estimators.CorrelationDoWork.CEWork;
@@ -97,7 +98,7 @@ public abstract class CorrelationEstimator {
 	public static double buyIndicatorLimit = 7.25;
 	public static double sellIndicatorLimit = 1.75;
 
-	static int queueCnt = 4;
+	static int queueCnt = 5;
 
 	static File resultsForDBFile;
 	static PrintWriter resultsForDBPrintWriter;
@@ -342,6 +343,7 @@ public abstract class CorrelationEstimator {
 			System.out.println();
 
 		ArrayList<CorrelationEstimatorRunner> estimators = new ArrayList<>();
+		correlation.Estimators.Runners.CorrelationEstimatorRunner.threadRunAverages = threadRunAverages;
 
 		// TODO set estimators
 		if (doA130DayRun == false) { // slowest first
@@ -970,6 +972,8 @@ public abstract class CorrelationEstimator {
 		estimatedPriceChangeCSVPW.close();
 
 		UpdateResults.updateResultsTable(conn, resultsForDBFile, debugging);
+
+		StreakFinder.findStreaks(rawDataCSVFile);
 
 	}
 
