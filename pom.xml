@@ -1,0 +1,48 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.mcabor</groupId>
+	<artifactId>cointergration</artifactId>
+	<version>2024-04-01</version>
+	<name>McVerry's Cointergration Algorithm Based On Relativity</name>
+	<description>A simple cointegration algorthim for two vectors.</description>
+	<licenses>
+		<license>
+			<name>GNU General Public License, Version 3.0</name>
+			<url>https://www.gnu.org/licenses/gpl-3.0.html#license-text</url>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<name>Joe McVerry</name>
+			<email>usacoder@gmail.com</email>
+		</developer>
+	</developers>
+	<scm>
+		<connection>scm:git:git://github.com/joe2ishere/MCABOR.git</connection>
+		<developerConnection>scm:git:ssh://github.com:joe2ishere/MCABOR.git</developerConnection>
+		<url>http://github.com/joe2ishere/MCABOR/tree/master</url>
+	</scm>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.12.1</version>
+				<configuration>
+					<source>18</source>
+					<target>18</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.2</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+</project>
