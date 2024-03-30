@@ -4,8 +4,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.junit.Test;
-import org.mcabor.BadCointegrationParm;
-import org.mcabor.Cointegration;
 
 public class cointergration {
 
@@ -126,7 +124,17 @@ public class cointergration {
 			Double in1[] = { 1., 2., 3., 4., 5. };
 			Double in2[] = { 1., 20., 300., 4000., 5000. };
 			var d = Cointegration.cointegration(in1, in2);
-			assertTrue(d != 0);
+			assertTrue(d != 0); // in my test returns 0.14
+
+		} catch (Exception e) {
+			fail("unexpected " + e.getMessage());
+		}
+
+		try {
+			Double in1[] = { 1., 2., 3., 4., 5. };
+			Double in2[] = { 1., -20000., 3., 4., 5e-9 };
+			var d = Cointegration.cointegration(in1, in2);
+			assertTrue(d < .4); // in my test returns 0.3999989985749999
 
 		} catch (Exception e) {
 			fail("unexpected " + e.getMessage());
