@@ -34,9 +34,17 @@ unique minimum and maximum values.
 - iterates again to compute each elements relative value to the minimum and maximum, the computed value will be 
 between 0 and 1.
 
-   * during this iteration it sums the absolute value of the difference of all of the two relative values based on their position.
-
+   * during this iteration it sums the absolute value of the difference of all of the two <u>relative</u> values based on their position.
+   
 - it returns the sum divided by the number of elements in the ArrayLists.
+
+- return value will range between 0. to 1.0:
+   
+  - 0. - perfect cointegration.
+   
+  - 1. - the numbers move in complete opposition to each other.
+   
+  - .5 - complete randomness.
 
 
 Supported Language
@@ -48,7 +56,7 @@ Java
 Build MCABOR
 ---------------
 
-Please use [build guide](pom.xml) to build MCABOR from source.
+Please use [pom,xml file](pom.xml) to build MCABOR from source.
 
 
 Contribution
