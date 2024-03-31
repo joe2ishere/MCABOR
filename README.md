@@ -38,14 +38,16 @@ between 0 and 1.
    
 - it returns the sum divided by the number of elements in the ArrayLists.
 
+  $$( \sum_{k=1}^n ( ( ( a_k - min(a) )  /  ( max(a) -min(a) ) )  - ( ( b_k - min(b) )  /  ( max(b) -min(b) ) ) )/ n$$ 
+
 - return value will range between 0. to 1.0:
    
-  - 0. - perfect cointegration.
-   
-  - 1. - the numbers move in complete opposition to each other.
-   
-  - .5 - complete randomness.
+  - 0 - perfect cointegration.
 
+  - 0.5 - complete randomness.
+  
+  - 1.0 - the numbers move in complete opposition to each other.
+   
 
 Supported Language
 ------------
@@ -56,7 +58,7 @@ Java
 Build MCABOR
 ---------------
 
-Please use [pom,xml file](pom.xml) to build MCABOR from source.
+Please use [pom.xml file](pom.xml) to build MCABOR from source.
 
 
 Contribution
