@@ -38,7 +38,7 @@ between 0 and 1.
    
 - it returns the sum divided by the number of elements in the ArrayLists.
 
-  $$( \sum_{k=1}^n ( ( ( a_k - min(a) )  /  ( max(a) -min(a) ) )  - ( ( b_k - min(b) )  /  ( max(b) -min(b) ) ) )/ n$$ 
+  $$( \sum_{k=1}^n abs( ( ( A_k - min(A) )  /  ( max(A)-min(A) ) )  - ( ( B_k - min(B) )  /  ( max(B) -min(B) ) ) )/ n$$ 
 
 - return value will range between 0. to 1.0:
    
