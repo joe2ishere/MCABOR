@@ -47,6 +47,39 @@ between 0 and 1.
   - 0.5 - complete randomness.
   
   - 1.0 - the numbers move in complete opposition to each other.
+  - 
+ 
+Sample Code
+-----------
+
+```java
+
+import org.mcabor.Cointegration;
+
+...
+ArrayList<Double> firstArray = new ArrayList<>();
+for (var in:sourceData1)
+  firstArray.add(in);
+
+ArrayList<Double> secondArray = new ArrayList<>();
+for (var in:sourceData2)
+  secondArray.add(in);
+
+...
+ try{
+ var rank = Cointegration.cointegration(firstArray, secondArray);
+ if (rank > .05)
+	continue;  // we want a return value below or equal to .95
+  }
+  catch (Exception e)
+  {
+     e.printStackTrace();
+     return;
+  }
+
+// do something
+
+``` 
    
 
 Supported Language
