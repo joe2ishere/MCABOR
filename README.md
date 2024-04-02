@@ -9,7 +9,7 @@ Description
 ------------------------------------------
 MCABOR is a simple cointegration calculator based on the Java language.   
 [GPL License](LICENSE).
-
+I wrote this to help me with building a Java based pairs trading program.  Let me know how you use it.
 
 Reference
 ------------------------------------------
@@ -18,8 +18,6 @@ Refer to the github repository for all updates and information
 Author
 ------------------
 Joe McVerry (usacoder@gmail.com)
-
-I wrote this to help me with building a Java based pairs trading program.  Let me know how you use it.
 
 MCABOR How It Works
 ---------------------
