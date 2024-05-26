@@ -67,7 +67,7 @@ for (var in:sourceData2)
  try{
  var rank = Cointegration.cointegration(firstArray, secondArray);
  if (rank > .05)
-	continue;  // we want a return value below or equal to .95
+	continue;  // we want a return value below or equal to .05
   }
   catch (Exception e)
   {
