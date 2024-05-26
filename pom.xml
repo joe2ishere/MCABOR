@@ -3,9 +3,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.mcabor</groupId>
-	<artifactId>cointergration</artifactId>
+	<artifactId>cointegration</artifactId>
 	<version>2024-04-01</version>
-	<name>McVerry's Cointergration Algorithm Based On Relativity</name>
+	<name>McVerry's Cointegration Algorithm Based On Relativity</name>
 	<description>A simple cointegration algorthim for two vectors.</description>
 	<licenses>
 		<license>
